@@ -1,0 +1,146 @@
+# SLMJury Model Configurations
+# All judge and student model definitions centralized here
+
+student_models:
+  qwen2.5-32b:
+    model: "Qwen/Qwen2.5-32B-Instruct-GPTQ-Int8"
+    tensor_parallel_size: 4
+    gpu_memory_utilization: 0.7
+    quantization: "gptq"
+  llama3.1-8b:
+    model: "meta-llama/Llama-3.1-8B-Instruct"
+    tensor_parallel_size: 4
+
+judge_models:
+  # Qwen 2.5 family
+  qwen2.5-1.5b:
+    model: "Qwen/Qwen2.5-1.5B-Instruct"
+    tensor_parallel_size: 1
+    max_model_len: 32768
+    max_num_seqs: 64
+  qwen2.5-3b:
+    model: "Qwen/Qwen2.5-3B-Instruct"
+    tensor_parallel_size: 1
+    max_model_len: 32768
+    max_num_seqs: 64
+  qwen2.5-7b:
+    model: "Qwen/Qwen2.5-7B-Instruct"
+    tensor_parallel_size: 4
+
+  # Qwen 3 family (enable_thinking via chat template)
+  qwen3-0.6b:
+    model: "Qwen/Qwen3-0.6B"
+    tensor_parallel_size: 1
+    max_model_len: 40960
+    enable_thinking: true
+    max_num_seqs: 64
+  qwen3-1.7b:
+    model: "Qwen/Qwen3-1.7B"
+    tensor_parallel_size: 1
+    max_model_len: 40960
+    enable_thinking: true
+    max_num_seqs: 64
+  qwen3-4b:
+    model: "Qwen/Qwen3-4B"
+    tensor_parallel_size: 1
+    max_model_len: 40960
+    enable_thinking: true
+    max_num_seqs: 64
+  qwen3-8b:
+    model: "Qwen/Qwen3-8B"
+    tensor_parallel_size: 4
+    max_model_len: 32768
+    enable_thinking: true
+  qwen3-14b:
+    model: "Qwen/Qwen3-14B"
+    tensor_parallel_size: 4
+    max_model_len: 32768
+    enable_thinking: true
+
+  # Meta Llama family
+  llama3.2-1b:
+    model: "meta-llama/Llama-3.2-1B-Instruct"
+    tensor_parallel_size: 1
+    max_model_len: 32768
+  llama3.2-3b:
+    model: "meta-llama/Llama-3.2-3B-Instruct"
+    tensor_parallel_size: 1
+    max_model_len: 40960
+    max_num_seqs: 64
+  llama3.1-8b:
+    model: "meta-llama/Llama-3.1-8B-Instruct"
+    tensor_parallel_size: 4
+    max_model_len: 32768
+
+  # Microsoft Phi-4 family
+  phi4-14b:
+    model: "microsoft/phi-4"
+    tensor_parallel_size: 2
+    max_model_len: 16384
+  phi4r-14b:
+    model: "microsoft/Phi-4-reasoning"
+    tensor_parallel_size: 2
+    max_model_len: 32768
+    enable_thinking: true
+    always_thinks: true  # Cannot disable thinking; skip max_tokens=10
+  phi4rp-14b:
+    model: "microsoft/Phi-4-reasoning-plus"
+    tensor_parallel_size: 2
+    max_model_len: 32768
+    enable_thinking: true
+    always_thinks: true
+  phi4mi-3.8b:
+    model: "microsoft/Phi-4-mini-instruct"
+    tensor_parallel_size: 1
+    gpu_memory_utilization: 0.85
+    max_model_len: 40960
+    max_num_seqs: 64
+  phi4mr-3.8b:
+    model: "microsoft/Phi-4-mini-reasoning"
+    tensor_parallel_size: 4
+    gpu_memory_utilization: 0.85
+    max_model_len: 32768
+    enable_thinking: true
+    always_thinks: true
+  phi4mfr-3.8b:
+    model: "microsoft/Phi-4-mini-flash-reasoning"
+    tensor_parallel_size: 4
+    gpu_memory_utilization: 0.85
+    max_model_len: 32768
+    enable_thinking: true
+    always_thinks: true
+
+# Datasets supported
+datasets:
+  - gsm8k
+  - gsm_plus
+  - math
+  - arc_easy
+  - arc_challenge
+
+# Token settings for judge evaluation
+token_settings:
+  quick:
+    max_tokens: 10
+    description: "Direct verdict only (Correct/Incorrect)"
+  reasoned:
+    max_tokens: 8192
+    description: "Reasoning + boxed verdict"
+
+# Top-5 judges for majority voting ensembles (from individual evaluation results)
+ensemble_judges:
+  - key: "qwen3-4b"
+    tokens: 10
+  - key: "phi4mi-3.8b"
+    tokens: 10
+  - key: "qwen2.5-3b"
+    tokens: 10
+  - key: "qwen3-1.7b"
+    tokens: 8192
+  - key: "qwen2.5-1.5b"
+    tokens: 8192
+
+# Persona prompts are defined in slmjury/strategies/persona.py
+# They use exact triple-quoted strings to preserve original whitespace.
+# Available: Strict, Lenient, Industry, Logic, Safety, Helpfulness
+

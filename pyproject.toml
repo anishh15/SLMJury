@@ -1,0 +1,98 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "slmjury"
+version = "0.1.0"
+description = "SLMJury: Can Small Language Models Judge Reasoning as Well as Large Ones?"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Anish Laddha"},
+    {name = "Nitesh Pradhan"},
+    {name = "Gaurav Srivastava"},
+]
+maintainers = [
+    {name = "Anish Laddha"},
+]
+keywords = [
+    "slm",
+    "llm",
+    "judge",
+    "evaluation",
+    "reasoning",
+    "nlp",
+    "small-language-models",
+    "multi-agent-debate",
+    "majority-voting",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.0.0",
+    "transformers>=4.40.0",
+    "datasets>=2.19.0",
+    "numpy>=1.26.0",
+    "pandas>=2.2.0",
+    "sympy>=1.12",
+    "pyyaml>=6.0",
+    "tqdm>=4.66.0",
+]
+
+[project.optional-dependencies]
+vllm = ["vllm>=0.4.0"]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.4.0",
+]
+full = [
+    "slmjury[vllm,dev]",
+]
+
+[project.urls]
+Homepage = "https://github.com/anishh15/SLMJury"
+Repository = "https://github.com/anishh15/SLMJury"
+"Bug Tracker" = "https://github.com/anishh15/SLMJury/issues"
+Leaderboard = "https://anishh15.github.io/SLMJury/"
+
+[tool.setuptools]
+packages = [
+    "slmjury",
+    "slmjury.configs",
+    "slmjury.data",
+    "slmjury.parsers",
+    "slmjury.core",
+    "slmjury.strategies",
+    "slmjury.utils",
+]
+
+[tool.setuptools.package-data]
+slmjury = ["configs/*.yaml", "py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]

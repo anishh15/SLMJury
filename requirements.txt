@@ -1,0 +1,12 @@
+# Core dependencies
+torch>=2.0.0
+transformers>=4.40.0
+datasets>=2.19.0
+numpy>=1.26.0
+pandas>=2.2.0
+sympy>=1.12
+pyyaml>=6.0
+tqdm>=4.66.0
+
+# GPU inference (optional - install separately)
+# vllm>=0.4.0
