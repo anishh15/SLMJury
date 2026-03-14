@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="32" height="32">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#080e1a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d1525;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0088CC;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#00AAFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#44CCFF;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Dark background -->
+  <rect width="400" height="400" rx="80" fill="url(#bg)"/>
+
+  <!-- Subtle glow -->
+  <circle cx="200" cy="200" r="120" fill="#00AAFF" opacity="0.06"/>
+
+  <!-- Scale icon (balance/justice) -->
+  <g transform="translate(200, 200)" stroke="url(#accent)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Center pillar -->
+    <line x1="0" y1="-90" x2="0" y2="90" stroke-width="12"/>
+    <!-- Base -->
+    <line x1="-50" y1="90" x2="50" y2="90" stroke-width="12"/>
+    <!-- Beam -->
+    <line x1="-95" y1="-65" x2="95" y2="-65" stroke-width="10"/>
+    <!-- Left pan strings -->
+    <line x1="-95" y1="-65" x2="-115" y2="20" stroke-width="6"/>
+    <line x1="-95" y1="-65" x2="-75" y2="20" stroke-width="6"/>
+    <!-- Left pan -->
+    <path d="M-125,20 Q-95,50 -65,20" stroke-width="8"/>
+    <!-- Right pan strings -->
+    <line x1="95" y1="-65" x2="75" y2="20" stroke-width="6"/>
+    <line x1="95" y1="-65" x2="115" y2="20" stroke-width="6"/>
+    <!-- Right pan -->
+    <path d="M65,20 Q95,50 125,20" stroke-width="8"/>
+    <!-- Top finial -->
+    <circle cx="0" cy="-90" r="10" fill="url(#accent)" stroke="none"/>
+  </g>
+</svg>
