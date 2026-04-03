@@ -1213,12 +1213,13 @@ export const projectInfo = {
     title: "SLMJury",
     subtitle: "Can Small Language Models Judge as Well as Large Language Models?",
     authors: [
-        { name: "Anish Laddha", affiliation: "lnmiit" },
-        { name: "Nitesh Pradhan", affiliation: "lnmiit" },
-        { name: "Gaurav Srivastava", affiliation: "lnmiit" },
+        { name: "Anish Laddha", affiliation: "lnmiit", email: "23ucs535@lnmiit.ac.in" },
+        { name: "Nitesh Pradhan", affiliation: "lnmiit", email: "nitesh.pradhan@lnmiit.ac.in" },
+        { name: "Gaurav Srivastava", affiliation: "vt", email: "gks@vt.edu" },
     ],
     affiliations: {
-        lnmiit: "LNM Institute of Information Technology, India",
+        lnmiit: "Department of Computer Science Engineering, LNMIIT, India",
+        vt: "Department of Computer Science, Virginia Tech, USA",
     },
     github: "https://github.com/anishh15/SLMJury",
 };

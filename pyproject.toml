@@ -9,12 +9,12 @@ description = "SLMJury: Can Small Language Models Judge Reasoning as Well as Lar
 readme = "README.md"
 license = {text = "Apache-2.0"}
 authors = [
-    {name = "Anish Laddha"},
-    {name = "Nitesh Pradhan"},
-    {name = "Gaurav Srivastava"},
+    {name = "Anish Laddha", email = "23ucs535@lnmiit.ac.in"},
+    {name = "Nitesh Pradhan", email = "nitesh.pradhan@lnmiit.ac.in"},
+    {name = "Gaurav Srivastava", email = "gks@vt.edu"},
 ]
 maintainers = [
-    {name = "Anish Laddha"},
+    {name = "Anish Laddha", email = "23ucs535@lnmiit.ac.in"},
 ]
 keywords = [
     "slm",

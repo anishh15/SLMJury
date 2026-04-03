@@ -5,7 +5,7 @@ of reasoning quality, with support for majority voting ensembles,
 multi-agent debate, and persona effects.
 
 Key Features:
-- 17 SLM judges across Qwen, Llama, and Phi-4 model families
+- 16 SLM judges across Qwen, Llama, and Phi-4 model families
 - 5 datasets (GSM8K, GSM-Plus, MATH, ARC-Easy, ARC-Challenge)
 - Majority voting ensembles from top-5 judges
 - Multi-agent debate with RCR prompting

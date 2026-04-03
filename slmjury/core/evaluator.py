@@ -67,6 +67,7 @@ class JudgeEvaluator:
 
         self._compute_metrics()
         self._build_summary()
+        self._print_summary()
 
         logger.info(
             "Results: accuracy=%.2f%%, IFR=%.2f%%, disagreements=%d/%d",
@@ -93,7 +94,9 @@ class JudgeEvaluator:
                     self.disagreements.append({
                         "problem_id": item.get("problem_id"),
                         "question": item.get("question"),
+                        "ground_truth_reasoning": item.get("ground_truth_reasoning"),
                         "ground_truth_answer": item.get("ground_truth_answer"),
+                        "student_reasoning": item.get("student_reasoning"),
                         "student_answer": student_answer,
                         "expected_verdict": expected,
                         "judge_verdict": judge_verdict,
@@ -138,6 +141,22 @@ class JudgeEvaluator:
             },
             "timestamp": datetime.now().isoformat(),
         }
+
+    def _print_summary(self):
+        """Print formatted evaluation summary to console."""
+        print(f"\n\U0001f4ca Results for {self.judge_model} (tokens={self.max_tokens}):")
+        print(f"   Dataset: {self.dataset} | Student: {self.student_model}")
+        print(f"   Accuracy:      {self.accuracy:.2%}")
+        print(f"   IFR:           {self.ifr:.2%}")
+        print(f"   Disagreements: {len(self.disagreements)}/{len(self.judgements)}")
+
+        if self.disagreements:
+            print("\n   Sample disagreements (first 3):")
+            for d in self.disagreements[:3]:
+                print(
+                    f"   - Problem {d['problem_id']}: "
+                    f"expected={d['expected_verdict']}, got={d['judge_verdict']}"
+                )
 
     def save_results(self, output_dir: Optional[Path] = None) -> Path:
         """Save evaluation results with disagreement details.
@@ -289,3 +308,67 @@ def parse_judgement_filename(filename: str) -> tuple[str, str, str, int]:
         raise ValueError(f"Cannot parse tokens from: {filename}")
 
     return parts[0], parts[1], "_".join(parts[2:tokens_idx]), max_tokens
+
+
+def list_judge_models(
+    judgements_dir: Path = Path("results/judgements"),
+) -> list[str]:
+    """Get list of all judge models with judgement files.
+
+    Args:
+        judgements_dir: Base directory containing per-model subdirectories.
+
+    Returns:
+        List of judge model directory names.
+    """
+    if not judgements_dir.exists():
+        return []
+    return [d.name for d in sorted(judgements_dir.iterdir()) if d.is_dir()]
+
+
+def evaluate_judge_with_tokens(
+    judge_model: str,
+    max_tokens: int,
+    judgements_dir: Path = Path("results/judgements"),
+    output_dir: Path = Path("results/evaluations"),
+):
+    """Evaluate all judgement files for a judge/token combination.
+
+    Args:
+        judge_model: Judge model key.
+        max_tokens: Token setting to filter files.
+        judgements_dir: Directory containing per-model judgement subdirectories.
+        output_dir: Base directory for saving evaluation results.
+    """
+    model_dir = judgements_dir / judge_model
+
+    if not model_dir.exists():
+        logger.warning("Judgement directory not found: %s", model_dir)
+        return
+
+    pattern = f"*_tokens-{max_tokens}.json"
+    judgement_files = list(model_dir.glob(pattern))
+
+    if not judgement_files:
+        logger.warning(
+            "No judgement files for %s with tokens=%d", judge_model, max_tokens,
+        )
+        return
+
+    for judgement_file in judgement_files:
+        judge, student, dataset, tokens = parse_judgement_filename(
+            judgement_file.name,
+        )
+
+        with open(judgement_file) as f:
+            judgements = json.load(f)
+
+        evaluator = JudgeEvaluator(
+            judge_model=judge,
+            student_model=student,
+            dataset=dataset,
+            max_tokens=tokens,
+            judgements=judgements,
+        )
+        evaluator.evaluate()
+        evaluator.save_results(output_dir=output_dir)

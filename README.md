@@ -13,7 +13,7 @@
 
 *Can Small Language Models Judge Reasoning as Well as Large Ones?*
 
-**🧑‍⚖️ 17 SLM Judges &bull; 📊 5 Datasets &bull; 🗳️ 3 Advanced Strategies &bull; 🎭 6 Persona Prompts**
+**🧑‍⚖️ 16 SLM Judges &bull; 📊 5 Datasets &bull; 🗳️ 3 Advanced Strategies &bull; 🎭 6 Persona Prompts**
 
 [**🏆 Leaderboard**](https://anishh15.github.io/SLMJury/) | [**📖 Paper**](https://arxiv.org/abs/XXXX.XXXXX) | [**📦 PyPI**](https://pypi.org/project/slmjury/) | [**🚀 Get Started**](#-installation)
 
@@ -25,7 +25,7 @@
 
 | | Date | Update |
 |:---:|:---|:---|
-| 🚀 | **Mar 2026** | v0.1.0 released — 17 judges, 5 datasets, 3 strategies, 6 personas. [See README](#-quick-start) |
+| 🚀 | **Mar 2026** | v0.1.0 released — 16 judges, 5 datasets, 3 strategies, 6 personas. [See README](#-quick-start) |
 | 🏆 | **Mar 2026** | Interactive leaderboard launched: [SLMJury Leaderboard](https://anishh15.github.io/SLMJury/) |
 | 📄 | **Mar 2026** | Paper submitted to arXiv |
 
@@ -48,7 +48,7 @@ SLMJury investigates whether **Small Language Models (0.6B–14B)** can reliably
 <td width="33%">
 
 #### 🧠 **Individual Judging**
-- 17 SLM judges from 4 model families
+- 16 SLM judges from 4 model families
 - Quick verdict vs. reasoned response
 - Accuracy & Instruction Following Rate
 

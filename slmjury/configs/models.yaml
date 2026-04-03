@@ -102,13 +102,6 @@ judge_models:
     max_model_len: 32768
     enable_thinking: true
     always_thinks: true
-  phi4mfr-3.8b:
-    model: "microsoft/Phi-4-mini-flash-reasoning"
-    tensor_parallel_size: 4
-    gpu_memory_utilization: 0.85
-    max_model_len: 32768
-    enable_thinking: true
-    always_thinks: true
 
 # Datasets supported
 datasets:

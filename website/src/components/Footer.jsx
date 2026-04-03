@@ -64,13 +64,22 @@ export default function Footer() {
               }`}>Contact</h4>
             <ul className="space-y-3 text-sm">
               <li>
-                <a href="mailto:anish15125@gmail.com" className={linkClass}>
+                <a href="mailto:23ucs535@lnmiit.ac.in" className={linkClass}>
                   <Mail className="w-3.5 h-3.5" />
-                  anish15125@gmail.com
+                  23ucs535@lnmiit.ac.in
                 </a>
               </li>
-              <li className={`${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
-                LNM Institute of Information Technology
+              <li>
+                <a href="mailto:nitesh.pradhan@lnmiit.ac.in" className={linkClass}>
+                  <Mail className="w-3.5 h-3.5" />
+                  nitesh.pradhan@lnmiit.ac.in
+                </a>
+              </li>
+              <li>
+                <a href="mailto:gks@vt.edu" className={linkClass}>
+                  <Mail className="w-3.5 h-3.5" />
+                  gks@vt.edu
+                </a>
               </li>
             </ul>
           </div>
@@ -78,7 +87,7 @@ export default function Footer() {
 
         <div className={`mt-10 pt-6 border-t text-center text-xs ${isDark ? 'border-bb-dark-50/10 text-gray-600' : 'border-bb-light-300/50 text-gray-400'
           }`}>
-          Anish Laddha, Nitesh Pradhan, Gaurav Srivastava &bull; LNMIIT
+          Anish Laddha, Nitesh Pradhan (LNMIIT) &bull; Gaurav Srivastava (Virginia Tech)
         </div>
       </div>
     </footer>

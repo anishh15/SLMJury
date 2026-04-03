@@ -11,7 +11,7 @@ class TestLoadModelsConfig:
     def test_has_judge_models(self):
         config = load_models_config()
         assert "judge_models" in config
-        assert len(config["judge_models"]) == 17
+        assert len(config["judge_models"]) == 16
 
     def test_has_student_models(self):
         config = load_models_config()

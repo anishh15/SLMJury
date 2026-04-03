@@ -565,10 +565,14 @@ export default function Leaderboard() {
                   </span>
                 ))}
               </div>
-              <div className="mt-4 flex flex-wrap items-center justify-center">
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                 <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium ${isDark ? 'bg-gradient-to-r from-bb-accent/10 to-bb-teal/10 text-gray-200 border border-bb-accent/20' : 'bg-gradient-to-r from-bb-accent-dark/8 to-bb-teal/8 text-gray-700 border border-bb-accent-dark/20'}`}>
                   <span className={`w-2 h-2 rounded-full ${isDark ? 'bg-bb-accent' : 'bg-bb-accent-dark'}`} />
-                  LNM Institute of Information Technology, India
+                  LNMIIT, India
+                </span>
+                <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium ${isDark ? 'bg-gradient-to-r from-bb-accent/10 to-bb-teal/10 text-gray-200 border border-bb-accent/20' : 'bg-gradient-to-r from-bb-accent-dark/8 to-bb-teal/8 text-gray-700 border border-bb-accent-dark/20'}`}>
+                  <span className={`w-2 h-2 rounded-full ${isDark ? 'bg-bb-accent' : 'bg-bb-accent-dark'}`} />
+                  Virginia Tech, USA
                 </span>
               </div>
             </div>

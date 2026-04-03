@@ -234,3 +234,98 @@ def calculate_accuracy(results: list[dict], dataset_name: str) -> dict:
         "accuracy": round(accuracy, 4),
         "accuracy_pct": round(accuracy * 100, 2),
     }
+
+
+def save_accuracy_summary(
+    accuracy_data: dict,
+    model_key: str,
+    output_dir: Path = Path("results/summaries"),
+) -> Path:
+    """Save accuracy summary, appending to existing file if present.
+
+    Args:
+        accuracy_data: Dict mapping dataset name → accuracy metrics dict.
+        model_key: Student model key.
+        output_dir: Directory for the summary JSON.
+
+    Returns:
+        Path to the saved summary file.
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+    summary_file = output_dir / "student_accuracy.json"
+
+    # Load existing data if file exists
+    if summary_file.exists():
+        with open(summary_file) as f:
+            all_data = json.load(f)
+    else:
+        all_data = {}
+
+    # Update with new data
+    if model_key not in all_data:
+        all_data[model_key] = {}
+    all_data[model_key].update(accuracy_data)
+    all_data[model_key]["last_updated"] = datetime.now().isoformat()
+
+    with open(summary_file, "w") as f:
+        json.dump(all_data, f, indent=2)
+
+    logger.info("Accuracy summary saved to %s", summary_file)
+    return summary_file
+
+
+def recalculate_accuracy_from_files(
+    solutions_dir: Path = Path("results/student_solutions"),
+    output_dir: Path = Path("results/summaries"),
+):
+    """Recalculate accuracy summary from existing student solution files.
+
+    Useful when the accuracy calculation logic changes — avoids re-running
+    inference.
+
+    Args:
+        solutions_dir: Directory containing per-model solution subdirectories.
+        output_dir: Directory for the summary JSON.
+    """
+    logger.info("Recalculating student accuracy from existing solutions...")
+
+    # Clear existing summary
+    summary_file = output_dir / "student_accuracy.json"
+    if summary_file.exists():
+        summary_file.unlink()
+
+    for model_dir in sorted(solutions_dir.iterdir()):
+        if not model_dir.is_dir():
+            continue
+
+        model_key = model_dir.name
+        logger.info("Processing %s...", model_key)
+
+        accuracy_data = {}
+
+        for solution_file in sorted(model_dir.glob("*.json")):
+            with open(solution_file) as f:
+                results = json.load(f)
+
+            if not results:
+                continue
+
+            # Extract dataset name from file data or filename
+            dataset = results[0].get(
+                "dataset", solution_file.stem.split("_")[-1],
+            )
+
+            acc = calculate_accuracy(results, dataset)
+            accuracy_data[dataset] = acc
+
+            logger.info(
+                "  %s: %d/%d correct, %d/%d valid",
+                dataset, acc["correct"], acc["total"],
+                acc["valid"], acc["total"],
+            )
+
+        if accuracy_data:
+            save_accuracy_summary(accuracy_data, model_key, output_dir)
+
+    logger.info("Accuracy summary recalculated: %s", summary_file)
+

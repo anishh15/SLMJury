@@ -38,7 +38,7 @@ _DEBATE_MAX_NUM_SEQS: dict[str, int] = {
     "qwen2.5-7b": 4, "qwen3-8b": 4, "llama3.1-8b": 4,
     # 3B–4B models
     "qwen2.5-3b": 6, "qwen3-4b": 6, "llama3.2-3b": 6,
-    "phi4mi-3.8b": 4, "phi4mr-3.8b": 4, "phi4mfr-3.8b": 4,
+    "phi4mi-3.8b": 4, "phi4mr-3.8b": 4,
     # 1.5B–1.7B & smaller
     "qwen2.5-1.5b": 8, "qwen3-1.7b": 8, "qwen3-0.6b": 8,
     "llama3.2-1b": 8, "qwen3-14b": 3,
