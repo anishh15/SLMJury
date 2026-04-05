@@ -119,8 +119,7 @@ def run_persona_evaluation(
     out_dir.mkdir(parents=True, exist_ok=True)
 
     filename = (
-        f"{persona_name}_{judge_model_key}_{student_model}_"
-        f"{dataset}_tokens-{max_tokens}.json"
+        f"{persona_name}_{student_model}_{dataset}_t{max_tokens}.json"
     )
     out_file = out_dir / filename
 

@@ -1205,7 +1205,7 @@ export const madData = [
     }
 ];
 
-// Personas used in Phase 2
+// Personas used in persona effect experiments
 export const PERSONAS = ["helpfulness", "industry", "lenient", "logic", "safety", "strict"];
 
 // Project information
@@ -1213,9 +1213,9 @@ export const projectInfo = {
     title: "SLMJury",
     subtitle: "Can Small Language Models Judge as Well as Large Language Models?",
     authors: [
-        { name: "Anish Laddha", affiliation: "lnmiit", email: "23ucs535@lnmiit.ac.in" },
-        { name: "Nitesh Pradhan", affiliation: "lnmiit", email: "nitesh.pradhan@lnmiit.ac.in" },
-        { name: "Gaurav Srivastava", affiliation: "vt", email: "gks@vt.edu" },
+        { name: "Anish Laddha", email: "23ucs535@lnmiit.ac.in", affiliation: "lnmiit" },
+        { name: "Nitesh Pradhan", email: "nitesh.pradhan@lnmiit.ac.in", affiliation: "lnmiit" },
+        { name: "Gaurav Srivastava", email: "gks@vt.edu", affiliation: "vt" },
     ],
     affiliations: {
         lnmiit: "Department of Computer Science Engineering, LNMIIT, India",

@@ -44,7 +44,7 @@ def main():
         student_model = student_dir.name
 
         for solution_file in sorted(student_dir.glob("*.json")):
-            dataset = solution_file.stem.replace(f"{student_model}_", "")
+            dataset = solution_file.stem
 
             with open(solution_file) as f:
                 student_results = json.load(f)

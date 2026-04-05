@@ -143,7 +143,7 @@ def save_ensemble_results(
     out_dir.mkdir(parents=True, exist_ok=True)
 
     for (student, dataset), problems in combined.items():
-        filename = f"{ensemble_name}_{student}_{dataset}.json"
+        filename = f"{student}_{dataset}.json"
         out_file = out_dir / filename
         with open(out_file, "w") as f:
             json.dump(problems, f, indent=4)

@@ -598,7 +598,7 @@ def save_debate_results(
     out_dir = output_dir / combo_name
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    filename = f"{combo_name}_{student_model}_{dataset}.json"
+    filename = f"{student_model}_{dataset}.json"
     out_file = out_dir / filename
 
     with open(out_file, "w") as f:

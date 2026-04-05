@@ -165,7 +165,7 @@ class StudentSolver:
         out_dir = self.output_dir / self.model_key
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        filename = f"{self.model_key}_{dataset_name}.json"
+        filename = f"{dataset_name}.json"
         out_file = out_dir / filename
 
         with open(out_file, "w") as f:
@@ -311,9 +311,7 @@ def recalculate_accuracy_from_files(
                 continue
 
             # Extract dataset name from file data or filename
-            dataset = results[0].get(
-                "dataset", solution_file.stem.split("_")[-1],
-            )
+            dataset = results[0].get("dataset", solution_file.stem)
 
             acc = calculate_accuracy(results, dataset)
             accuracy_data[dataset] = acc

@@ -10,23 +10,23 @@ from slmjury.core.evaluator import JudgeEvaluator, parse_judgement_filename
 
 class TestParseJudgementFilename:
     def test_standard_filename(self):
-        judge, student, dataset, tokens = parse_judgement_filename(
-            "qwen2.5-7b_llama3.1-8b_gsm8k_tokens-8192.json"
+        student, dataset, tokens = parse_judgement_filename(
+            "llama3.1-8b_gsm8k_t8192.json"
         )
-        assert judge == "qwen2.5-7b"
         assert student == "llama3.1-8b"
         assert dataset == "gsm8k"
         assert tokens == 8192
 
     def test_underscore_dataset(self):
-        judge, student, dataset, tokens = parse_judgement_filename(
-            "qwen2.5-7b_llama3.1-8b_arc_challenge_tokens-10.json"
+        student, dataset, tokens = parse_judgement_filename(
+            "llama3.1-8b_arc_challenge_t10.json"
         )
+        assert student == "llama3.1-8b"
         assert dataset == "arc_challenge"
         assert tokens == 10
 
     def test_invalid_filename(self):
-        with pytest.raises(ValueError, match="Cannot parse tokens"):
+        with pytest.raises(ValueError, match="Cannot parse"):
             parse_judgement_filename("bad_filename.json")
 
 

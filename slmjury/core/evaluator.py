@@ -6,6 +6,7 @@ answer comparison. Supports per-file evaluation and cross-file aggregation.
 
 import json
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -171,10 +172,7 @@ class JudgeEvaluator:
         out_dir = base / self.judge_model
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        filename = (
-            f"{self.judge_model}_{self.student_model}_"
-            f"{self.dataset}_tokens-{self.max_tokens}.json"
-        )
+        filename = f"{self.student_model}_{self.dataset}_t{self.max_tokens}.json"
         out_file = out_dir / filename
 
         full_results = {
@@ -213,7 +211,7 @@ def generate_judge_summary(
     base_eval = eval_dir or Path("results/evaluations")
     model_dir = base_eval / judge_model
 
-    pattern = f"{judge_model}_*_tokens-{max_tokens}.json"
+    pattern = f"*_t{max_tokens}.json"
     eval_files = list(model_dir.glob(pattern))
 
     if not eval_files:
@@ -269,9 +267,9 @@ def generate_judge_summary(
     }
 
     # Save summary
-    summaries_dir = output_dir or Path("results/evaluations/summaries")
+    summaries_dir = output_dir or Path("results/summaries/individual")
     summaries_dir.mkdir(parents=True, exist_ok=True)
-    summary_file = summaries_dir / f"{judge_model}_tokens-{max_tokens}.json"
+    summary_file = summaries_dir / f"{judge_model}_t{max_tokens}.json"
     with open(summary_file, "w") as f:
         json.dump(summary, f, indent=2)
 
@@ -279,35 +277,28 @@ def generate_judge_summary(
     return summary
 
 
-def parse_judgement_filename(filename: str) -> tuple[str, str, str, int]:
+def parse_judgement_filename(filename: str) -> tuple[str, str, int]:
     """Extract components from a judgement filename.
 
-    Expected format: {judge}_{student}_{dataset}_tokens-{n}.json
+    Expected format: {student}_{dataset}_t{n}.json
 
     Args:
         filename: Judgement filename or path.
 
     Returns:
-        Tuple of (judge_model, student_model, dataset, max_tokens).
+        Tuple of (student_model, dataset, max_tokens).
 
     Raises:
         ValueError: If filename doesn't match expected format.
     """
     name = Path(filename).stem
-    parts = name.split("_")
-
-    tokens_idx = None
-    max_tokens = 0
-    for i, part in enumerate(parts):
-        if part.startswith("tokens-"):
-            tokens_idx = i
-            max_tokens = int(part.split("-")[1])
-            break
-
-    if tokens_idx is None:
-        raise ValueError(f"Cannot parse tokens from: {filename}")
-
-    return parts[0], parts[1], "_".join(parts[2:tokens_idx]), max_tokens
+    match = re.match(
+        r"^(.+?)_(gsm8k|gsm_plus|math|arc_easy|arc_challenge)_t(\d+)$",
+        name,
+    )
+    if match is None:
+        raise ValueError(f"Cannot parse judgement filename: {filename}")
+    return match.group(1), match.group(2), int(match.group(3))
 
 
 def list_judge_models(
@@ -346,7 +337,7 @@ def evaluate_judge_with_tokens(
         logger.warning("Judgement directory not found: %s", model_dir)
         return
 
-    pattern = f"*_tokens-{max_tokens}.json"
+    pattern = f"*_t{max_tokens}.json"
     judgement_files = list(model_dir.glob(pattern))
 
     if not judgement_files:
@@ -356,7 +347,7 @@ def evaluate_judge_with_tokens(
         return
 
     for judgement_file in judgement_files:
-        judge, student, dataset, tokens = parse_judgement_filename(
+        student, dataset, tokens = parse_judgement_filename(
             judgement_file.name,
         )
 
@@ -364,7 +355,7 @@ def evaluate_judge_with_tokens(
             judgements = json.load(f)
 
         evaluator = JudgeEvaluator(
-            judge_model=judge,
+            judge_model=judge_model,
             student_model=student,
             dataset=dataset,
             max_tokens=tokens,
