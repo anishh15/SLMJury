@@ -97,7 +97,7 @@ class JudgeModel:
         vllm_kwargs = {
             "model": cfg["model"],
             "tensor_parallel_size": cfg.get("tensor_parallel_size", 4),
-            "gpu_memory_utilization": cfg.get("gpu_memory_utilization", 0.85),
+            "gpu_memory_utilization": cfg.get("gpu_memory_utilization", 0.9),
             "max_num_seqs": cfg.get("max_num_seqs", 32),
             "enable_chunked_prefill": False,
             "trust_remote_code": True,

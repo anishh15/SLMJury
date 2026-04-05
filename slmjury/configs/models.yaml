@@ -4,12 +4,13 @@
 student_models:
   qwen2.5-32b:
     model: "Qwen/Qwen2.5-32B-Instruct-GPTQ-Int8"
-    tensor_parallel_size: 4
-    gpu_memory_utilization: 0.7
+    tensor_parallel_size: 2
+    gpu_memory_utilization: 0.9
     quantization: "gptq"
   llama3.1-8b:
     model: "meta-llama/Llama-3.1-8B-Instruct"
-    tensor_parallel_size: 4
+    tensor_parallel_size: 2
+    gpu_memory_utilization: 0.9
 
 judge_models:
   # Qwen 2.5 family
@@ -25,7 +26,7 @@ judge_models:
     max_num_seqs: 64
   qwen2.5-7b:
     model: "Qwen/Qwen2.5-7B-Instruct"
-    tensor_parallel_size: 4
+    tensor_parallel_size: 2
 
   # Qwen 3 family (enable_thinking via chat template)
   qwen3-0.6b:
@@ -48,12 +49,12 @@ judge_models:
     max_num_seqs: 64
   qwen3-8b:
     model: "Qwen/Qwen3-8B"
-    tensor_parallel_size: 4
+    tensor_parallel_size: 2
     max_model_len: 32768
     enable_thinking: true
   qwen3-14b:
     model: "Qwen/Qwen3-14B"
-    tensor_parallel_size: 4
+    tensor_parallel_size: 2
     max_model_len: 32768
     enable_thinking: true
 
@@ -69,7 +70,7 @@ judge_models:
     max_num_seqs: 64
   llama3.1-8b:
     model: "meta-llama/Llama-3.1-8B-Instruct"
-    tensor_parallel_size: 4
+    tensor_parallel_size: 2
     max_model_len: 32768
 
   # Microsoft Phi-4 family
@@ -97,7 +98,7 @@ judge_models:
     max_num_seqs: 64
   phi4mr-3.8b:
     model: "microsoft/Phi-4-mini-reasoning"
-    tensor_parallel_size: 4
+    tensor_parallel_size: 2
     gpu_memory_utilization: 0.85
     max_model_len: 32768
     enable_thinking: true
