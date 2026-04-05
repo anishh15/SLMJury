@@ -74,6 +74,15 @@ class StudentSolver:
                 )
             cfg = students[model_key]
 
+        # Apply overrides from model_config if YAML was used as base
+        if model_config and "model" not in model_config:
+            config = load_models_config()
+            students = config.get("student_models", {})
+            if model_key in students:
+                base = students[model_key]
+                base.update(model_config)
+                cfg = base
+
         self.model_name = cfg["model"]
         self.tokenizer = AutoTokenizer.from_pretrained(cfg["model"], trust_remote_code=True)
 

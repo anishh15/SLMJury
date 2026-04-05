@@ -80,6 +80,15 @@ class JudgeModel:
                 )
             cfg = judges[model_key]
 
+        # Apply overrides from model_config if YAML was used as base
+        if model_config and "model" not in model_config:
+            config = load_models_config()
+            judges = config.get("judge_models", {})
+            if model_key in judges:
+                base = judges[model_key]
+                base.update(model_config)
+                cfg = base
+
         self.model_name = cfg["model"]
         self.enable_thinking = cfg.get("enable_thinking", False)
         self.always_thinks = cfg.get("always_thinks", False)
