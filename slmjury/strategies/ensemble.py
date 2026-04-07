@@ -53,11 +53,11 @@ def load_judgements_by_key(
         Dict keyed by (student_model, dataset) → list of judgement dicts.
     """
     model_dir = judgements_dir / model
-    pattern = f"{model}_*_tokens-{max_tokens}.json"
+    pattern = f"*_t{max_tokens}.json"
 
     result: dict[tuple[str, str], list[dict]] = {}
     for f in model_dir.glob(pattern):
-        _, student, dataset, _ = parse_judgement_filename(f.name)
+        student, dataset, _ = parse_judgement_filename(f.name)
         with open(f) as fp:
             result[(student, dataset)] = json.load(fp)
 
