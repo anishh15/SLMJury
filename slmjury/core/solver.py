@@ -81,7 +81,7 @@ class StudentSolver:
         from transformers import AutoTokenizer
 
         self.model_key = model_key
-        self.output_dir = output_dir
+        self.output_dir = Path(output_dir)
 
         if model_config:
             cfg = model_config

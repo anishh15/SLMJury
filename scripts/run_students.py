@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+from pathlib import Path
 
 from slmjury.configs import load_models_config
 from slmjury.core.solver import StudentSolver
@@ -43,7 +44,7 @@ def main():
 
     solver = StudentSolver(
         args.model,
-        output_dir=args.output_dir,
+        output_dir=Path(args.output_dir),
         model_config=model_config or None,
     )
 
