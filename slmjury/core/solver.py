@@ -1,7 +1,8 @@
 """Student solver — generates solutions using large student models via vLLM.
 
 Loads a student model once and solves problems across multiple datasets
-efficiently. Supports configurable prompt templates per dataset type.
+efficiently. Supports configurable prompt templates per dataset type,
+with dataset-specific routing for science vs. general multiple choice.
 """
 
 import gc
@@ -38,7 +39,27 @@ PROMPT_TEMPLATES = {
         "Choose A, B, C, or D.\n\n{question}\n\n"
         "Think step-by-step, then give your final answer."
     ),
+    "multiple_choice_general": (
+        "Think step-by-step to answer this question. "
+        "Choose the best option.\n\n{question}\n\n"
+        "Think step-by-step, then give your final answer."
+    ),
 }
+
+# Datasets that use science-specific MC prompt (all other MC datasets use general)
+_SCIENCE_MC_DATASETS = frozenset({"arc_easy", "arc_challenge"})
+
+
+def _get_prompt_key(dataset_name: str, dataset_type: str) -> str:
+    """Get the prompt template key for a dataset.
+
+    Routes science MC (ARC) to the science-specific prompt and all
+    other MC datasets (HellaSwag, WinoGrande, TruthfulQA) to the
+    general prompt.
+    """
+    if dataset_type == "multiple_choice" and dataset_name not in _SCIENCE_MC_DATASETS:
+        return "multiple_choice_general"
+    return dataset_type
 
 
 class StudentSolver:
@@ -125,7 +146,8 @@ class StudentSolver:
             problems = problems[:num_samples]
 
         dataset_type = get_dataset_type(dataset_name)
-        template = PROMPT_TEMPLATES[dataset_type]
+        prompt_key = _get_prompt_key(dataset_name, dataset_type)
+        template = PROMPT_TEMPLATES[prompt_key]
 
         logger.info("Solving %d %s problems...", len(problems), dataset_name)
 

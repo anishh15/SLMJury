@@ -44,7 +44,10 @@ def get_dataset_type(dataset_name: str) -> str:
         return "numeric"
     elif name in ("math", "hendrycks_math", "competition_math"):
         return "latex"
-    elif name in ("arc_easy", "arc_challenge", "arc", "ai2_arc"):
+    elif name in (
+        "arc_easy", "arc_challenge", "arc", "ai2_arc",
+        "hellaswag", "winogrande", "truthfulqa", "truthful_qa",
+    ):
         return "multiple_choice"
     return "numeric"
 

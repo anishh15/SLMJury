@@ -97,6 +97,27 @@ DEBATE_PROMPT_SCIENCE = (
     "Your final verdict must be: \\boxed{{CORRECT}} or \\boxed{{INCORRECT}}"
 )
 
+# RCR debate prompt for general (non-science, non-math) multiple choice datasets
+DEBATE_PROMPT_GENERAL = (
+    "You are Agent {agent_id} in a multi-agent debate to judge whether "
+    "a student's answer is correct.\n\n"
+    "Question: {question}\n\n"
+    "Ground truth answer: {ground_truth}\n\n"
+    "Student answer: {student_answer}\n\n"
+    "{own_previous}\n\n"
+    "Here are the judgements from other agents:\n{context}\n\n"
+    "This is debate round {round_num}. Please carefully analyze all "
+    "judgements—including your own—identify any errors in reasoning, "
+    "and provide your revised judgement.\n"
+    "- If you believe your previous verdict is correct, explain clearly why "
+    "and defend your position.\n"
+    "- If you believe you made an error, explain what went wrong "
+    "and provide a corrected judgement.\n"
+    "- If you believe another agent's verdict is correct, explain why you "
+    "agree with their reasoning.\n\n"
+    "Your final verdict must be: \\boxed{{CORRECT}} or \\boxed{{INCORRECT}}"
+)
+
 # Default MAD combinations
 MAD_COMBINATIONS = [
     # Variant A: Different models, same temperature (cross-architecture debate)
@@ -121,11 +142,19 @@ def _is_same_model_combo(combo_models: list[str]) -> bool:
     return combo_models[0] == combo_models[1] == combo_models[2]
 
 
+# Datasets that use the science-specific debate prompt
+_SCIENCE_DEBATE_DATASETS = frozenset({"arc_easy", "arc_challenge"})
+# Datasets that use the math-specific debate prompt
+_MATH_DEBATE_DATASETS = frozenset({"gsm8k", "gsm_plus", "math"})
+
+
 def get_debate_prompt_template(dataset_name: str) -> str:
-    """Return math or science debate prompt based on dataset type."""
-    if get_dataset_type(dataset_name) == "multiple_choice":
+    """Return math, science, or general debate prompt based on dataset."""
+    if dataset_name in _MATH_DEBATE_DATASETS:
+        return DEBATE_PROMPT_MATH
+    elif dataset_name in _SCIENCE_DEBATE_DATASETS:
         return DEBATE_PROMPT_SCIENCE
-    return DEBATE_PROMPT_MATH
+    return DEBATE_PROMPT_GENERAL
 
 
 def build_debate_context(

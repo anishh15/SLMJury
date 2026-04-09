@@ -25,6 +25,30 @@ class TestParseJudgementFilename:
         assert dataset == "arc_challenge"
         assert tokens == 10
 
+    def test_hellaswag_filename(self):
+        student, dataset, tokens = parse_judgement_filename(
+            "qwen2.5-7b_hellaswag_t10.json"
+        )
+        assert student == "qwen2.5-7b"
+        assert dataset == "hellaswag"
+        assert tokens == 10
+
+    def test_winogrande_filename(self):
+        student, dataset, tokens = parse_judgement_filename(
+            "llama3.1-8b_winogrande_t8192.json"
+        )
+        assert student == "llama3.1-8b"
+        assert dataset == "winogrande"
+        assert tokens == 8192
+
+    def test_truthfulqa_filename(self):
+        student, dataset, tokens = parse_judgement_filename(
+            "phi4mi-3.8b_truthfulqa_t10.json"
+        )
+        assert student == "phi4mi-3.8b"
+        assert dataset == "truthfulqa"
+        assert tokens == 10
+
     def test_invalid_filename(self):
         with pytest.raises(ValueError, match="Cannot parse"):
             parse_judgement_filename("bad_filename.json")

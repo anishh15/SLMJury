@@ -26,6 +26,12 @@ class TestGetDatasetType:
         assert get_dataset_type("arc_easy") == "multiple_choice"
         assert get_dataset_type("arc_challenge") == "multiple_choice"
 
+    def test_general_multiple_choice_datasets(self):
+        assert get_dataset_type("hellaswag") == "multiple_choice"
+        assert get_dataset_type("winogrande") == "multiple_choice"
+        assert get_dataset_type("truthfulqa") == "multiple_choice"
+        assert get_dataset_type("truthful_qa") == "multiple_choice"
+
     def test_unknown_defaults_to_numeric(self):
         assert get_dataset_type("unknown_dataset") == "numeric"
 

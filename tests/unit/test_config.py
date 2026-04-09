@@ -21,7 +21,10 @@ class TestLoadModelsConfig:
     def test_has_datasets(self):
         config = load_models_config()
         assert "datasets" in config
-        expected = ["gsm8k", "gsm_plus", "math", "arc_easy", "arc_challenge"]
+        expected = [
+            "gsm8k", "gsm_plus", "math", "arc_easy", "arc_challenge",
+            "hellaswag", "winogrande", "truthfulqa",
+        ]
         assert config["datasets"] == expected
 
     def test_has_token_settings(self):

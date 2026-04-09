@@ -13,7 +13,8 @@ def main():
     parser.add_argument("--model", required=True, help="Student model key from models.yaml")
     parser.add_argument(
         "--datasets", nargs="+",
-        default=["gsm8k", "gsm_plus", "math", "arc_easy", "arc_challenge"],
+        default=["gsm8k", "gsm_plus", "math", "arc_easy", "arc_challenge",
+                 "hellaswag", "winogrande", "truthfulqa"],
         help="Datasets to solve (default: all)",
     )
     parser.add_argument("--num-samples", type=int, default=None, help="Limit problems per dataset")

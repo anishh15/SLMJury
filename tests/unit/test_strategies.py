@@ -16,6 +16,7 @@ from slmjury.strategies.debate import (
     MAX_DEBATE_ROUNDS,
     DEBATE_PROMPT_MATH,
     DEBATE_PROMPT_SCIENCE,
+    DEBATE_PROMPT_GENERAL,
     MAD_COMBINATIONS,
 )
 
@@ -124,7 +125,11 @@ class TestDebateUtils:
         assert len(MAD_COMBINATIONS) == 10
 
     def test_debate_prompts_have_placeholders(self):
-        for name, prompt in [("math", DEBATE_PROMPT_MATH), ("science", DEBATE_PROMPT_SCIENCE)]:
+        for name, prompt in [
+            ("math", DEBATE_PROMPT_MATH),
+            ("science", DEBATE_PROMPT_SCIENCE),
+            ("general", DEBATE_PROMPT_GENERAL),
+        ]:
             for ph in ["{agent_id}", "{question}", "{ground_truth}", "{student_answer}",
                        "{own_previous}", "{context}", "{round_num}"]:
                 assert ph in prompt, f"{name} missing placeholder {ph}"
@@ -136,6 +141,11 @@ class TestDebateUtils:
     def test_get_debate_prompt_science(self):
         assert get_debate_prompt_template("arc_easy") is DEBATE_PROMPT_SCIENCE
         assert get_debate_prompt_template("arc_challenge") is DEBATE_PROMPT_SCIENCE
+
+    def test_get_debate_prompt_general(self):
+        assert get_debate_prompt_template("hellaswag") is DEBATE_PROMPT_GENERAL
+        assert get_debate_prompt_template("winogrande") is DEBATE_PROMPT_GENERAL
+        assert get_debate_prompt_template("truthfulqa") is DEBATE_PROMPT_GENERAL
 
     def test_check_consensus_unanimous(self):
         state = {

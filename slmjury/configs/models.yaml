@@ -115,6 +115,9 @@ datasets:
   - math
   - arc_easy
   - arc_challenge
+  - hellaswag
+  - winogrande
+  - truthfulqa
 
 # Token settings for judge evaluation
 token_settings:
