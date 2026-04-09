@@ -18,12 +18,33 @@ def main():
     )
     parser.add_argument("--num-samples", type=int, default=None, help="Limit problems per dataset")
     parser.add_argument("--output-dir", default="results/student_solutions")
+
+    # Hardware overrides
+    parser.add_argument(
+        "--tensor-parallel-size", "--tp", type=int, default=None,
+        help="Override tensor_parallel_size from models.yaml",
+    )
+    parser.add_argument(
+        "--gpu-memory-utilization", "--gpu-mem", type=float, default=None,
+        help="Override gpu_memory_utilization from models.yaml",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     logger = logging.getLogger(__name__)
 
-    solver = StudentSolver(args.model, output_dir=args.output_dir)
+    # Build model_config override from CLI args
+    model_config = {}
+    if args.tensor_parallel_size is not None:
+        model_config["tensor_parallel_size"] = args.tensor_parallel_size
+    if args.gpu_memory_utilization is not None:
+        model_config["gpu_memory_utilization"] = args.gpu_memory_utilization
+
+    solver = StudentSolver(
+        args.model,
+        output_dir=args.output_dir,
+        model_config=model_config or None,
+    )
 
     for dataset_name in args.datasets:
         logger.info("Loading dataset: %s", dataset_name)

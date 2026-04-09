@@ -21,6 +21,16 @@ def main():
         help="Directory containing student solution files",
     )
     parser.add_argument("--output-dir", default="results/judgements")
+
+    # Hardware overrides
+    parser.add_argument(
+        "--tensor-parallel-size", "--tp", type=int, default=None,
+        help="Override tensor_parallel_size from models.yaml",
+    )
+    parser.add_argument(
+        "--gpu-memory-utilization", "--gpu-mem", type=float, default=None,
+        help="Override gpu_memory_utilization from models.yaml",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -35,7 +45,18 @@ def main():
         token_settings = [t for t in token_settings if t != 10]
         logger.info("Model %s always thinks — skipping max_tokens=10", args.judge)
 
-    judge = JudgeModel(args.judge, output_dir=Path(args.output_dir))
+    # Build model_config override from CLI args
+    model_config = {}
+    if args.tensor_parallel_size is not None:
+        model_config["tensor_parallel_size"] = args.tensor_parallel_size
+    if args.gpu_memory_utilization is not None:
+        model_config["gpu_memory_utilization"] = args.gpu_memory_utilization
+
+    judge = JudgeModel(
+        args.judge,
+        output_dir=Path(args.output_dir),
+        model_config=model_config or None,
+    )
 
     solutions_dir = Path(args.solutions_dir)
     for student_dir in sorted(solutions_dir.iterdir()):

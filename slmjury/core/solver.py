@@ -183,8 +183,15 @@ class StudentSolver:
         logger.info("Saved %d solutions to %s", len(results), out_file.name)
         return out_file
 
-    def cleanup(self):
-        """Release GPU memory and clean up distributed processes."""
+    def cleanup(self, clear_hf_cache: bool = True):
+        """Release GPU memory and clean up distributed processes.
+
+        Args:
+            clear_hf_cache: If True, delete the model's HF cache to free
+                disk space.
+        """
+        model_name = getattr(self, "model_name", None)
+
         if hasattr(self, "llm"):
             del self.llm
         gc.collect()
@@ -208,6 +215,14 @@ class StudentSolver:
             if key.startswith(("NCCL_", "RANK", "WORLD")):
                 if key not in ("NCCL_DEBUG", "NCCL_IB_DISABLE"):
                     os.environ.pop(key, None)
+
+        if clear_hf_cache and model_name:
+            cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
+            model_dir_name = f"models--{model_name.replace('/', '--')}"
+            model_cache = cache_dir / model_dir_name
+            if model_cache.exists():
+                shutil.rmtree(model_cache, ignore_errors=True)
+                logger.info("Cleared HF cache: %s", model_dir_name)
 
         logger.debug("Cleanup complete")
 

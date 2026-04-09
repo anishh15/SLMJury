@@ -97,7 +97,7 @@ class JudgeModel:
         vllm_kwargs = {
             "model": cfg["model"],
             "tensor_parallel_size": cfg.get("tensor_parallel_size", 4),
-            "gpu_memory_utilization": cfg.get("gpu_memory_utilization", 0.9),
+            "gpu_memory_utilization": cfg.get("gpu_memory_utilization", 0.8),
             "max_num_seqs": cfg.get("max_num_seqs", 32),
             "enable_chunked_prefill": False,
             "trust_remote_code": True,
@@ -244,8 +244,16 @@ class JudgeModel:
         logger.info("Saved judgements to %s", out_file.name)
         return out_file
 
-    def cleanup(self):
-        """Release GPU memory and clean up distributed processes."""
+    def cleanup(self, clear_hf_cache: bool = True):
+        """Release GPU memory and clean up distributed processes.
+
+        Args:
+            clear_hf_cache: If True, delete the model's HF cache to free
+                disk space. Set to False for MAD workers that reload
+                models across debate rounds.
+        """
+        model_name = getattr(self, "model_name", None)
+
         if hasattr(self, "llm"):
             del self.llm
         gc.collect()
@@ -269,4 +277,14 @@ class JudgeModel:
                 if key not in ("NCCL_DEBUG", "NCCL_IB_DISABLE"):
                     os.environ.pop(key, None)
 
+        if clear_hf_cache and model_name:
+            import shutil
+            cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
+            model_dir_name = f"models--{model_name.replace('/', '--')}"
+            model_cache = cache_dir / model_dir_name
+            if model_cache.exists():
+                shutil.rmtree(model_cache, ignore_errors=True)
+                logger.info("Cleared HF cache: %s", model_dir_name)
+
         logger.debug("Cleanup complete")
+

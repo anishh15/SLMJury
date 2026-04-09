@@ -49,7 +49,7 @@ class TestLoadModelsConfig:
         config = load_models_config()
         qwen = config["judge_models"]["qwen2.5-7b"]
         assert qwen["model"] == "Qwen/Qwen2.5-7B-Instruct"
-        assert qwen["tensor_parallel_size"] == 2
+        assert qwen["tensor_parallel_size"] == 4
 
     def test_thinking_models_flagged(self):
         config = load_models_config()

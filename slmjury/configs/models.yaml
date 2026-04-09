@@ -5,12 +5,12 @@ student_models:
   qwen2.5-32b:
     model: "Qwen/Qwen2.5-32B-Instruct-GPTQ-Int8"
     tensor_parallel_size: 2
-    gpu_memory_utilization: 0.9
+    gpu_memory_utilization: 0.85
     quantization: "gptq"
   llama3.1-8b:
     model: "meta-llama/Llama-3.1-8B-Instruct"
     tensor_parallel_size: 2
-    gpu_memory_utilization: 0.9
+    gpu_memory_utilization: 0.85
     max_model_len: 32768
 
 judge_models:
@@ -78,16 +78,19 @@ judge_models:
   phi4-14b:
     model: "microsoft/phi-4"
     tensor_parallel_size: 2
+    gpu_memory_utilization: 0.85
     max_model_len: 16384
   phi4r-14b:
     model: "microsoft/Phi-4-reasoning"
     tensor_parallel_size: 2
+    gpu_memory_utilization: 0.85
     max_model_len: 32768
     enable_thinking: true
     always_thinks: true  # Cannot disable thinking; skip max_tokens=10
   phi4rp-14b:
     model: "microsoft/Phi-4-reasoning-plus"
     tensor_parallel_size: 2
+    gpu_memory_utilization: 0.85
     max_model_len: 32768
     enable_thinking: true
     always_thinks: true
@@ -99,7 +102,7 @@ judge_models:
     max_num_seqs: 64
   phi4mr-3.8b:
     model: "microsoft/Phi-4-mini-reasoning"
-    tensor_parallel_size: 2
+    tensor_parallel_size: 1
     gpu_memory_utilization: 0.85
     max_model_len: 32768
     enable_thinking: true

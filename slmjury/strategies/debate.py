@@ -351,7 +351,7 @@ def _worker_single_agent(input_path: str, output_path: str):
     with open(output_path, "wb") as f:
         pickle.dump(results, f)
 
-    judge.cleanup()
+    judge.cleanup(clear_hf_cache=False)
 
 
 def _worker_same_model_agents(input_path: str, output_path: str):
@@ -381,7 +381,7 @@ def _worker_same_model_agents(input_path: str, output_path: str):
     with open(output_path, "wb") as f:
         pickle.dump(all_results, f)
 
-    judge.cleanup()
+    judge.cleanup(clear_hf_cache=False)
 
 
 def run_agent_turn(
@@ -393,7 +393,6 @@ def run_agent_turn(
     debate_state: Optional[dict] = None,
     agent_id: Optional[int] = None,
     tp_size_override: Optional[int] = None,
-    gpu_memory_utilization: Optional[float] = None,
 ) -> list[dict]:
     """Run one agent's inference in an isolated subprocess.
 
@@ -406,7 +405,6 @@ def run_agent_turn(
         debate_state: Current debate state (for rounds > 0).
         agent_id: Agent index (0, 1, or 2).
         tp_size_override: Optional tensor_parallel_size override.
-        gpu_memory_utilization: Optional GPU memory fraction override.
 
     Returns:
         List of judgement result dicts.
@@ -420,8 +418,6 @@ def run_agent_turn(
     cfg_override = dict(config.get("judge_models", {}).get(model_key, {}))
     if tp_size_override is not None:
         cfg_override["tensor_parallel_size"] = tp_size_override
-    if gpu_memory_utilization is not None:
-        cfg_override["gpu_memory_utilization"] = gpu_memory_utilization
     cfg_override["max_num_seqs"] = _DEBATE_MAX_NUM_SEQS.get(model_key, 6)
 
     return _run_in_subprocess(_worker_single_agent, {
@@ -444,7 +440,6 @@ def run_agent_turn_same_model(
     dataset_name: str,
     debate_state: Optional[dict] = None,
     tp_size_override: Optional[int] = None,
-    gpu_memory_utilization: Optional[float] = None,
 ) -> list[list[dict]]:
     """Run 3 same-model agents (Variant B) in an isolated subprocess.
 
@@ -456,7 +451,6 @@ def run_agent_turn_same_model(
         dataset_name: Dataset name.
         debate_state: Current debate state.
         tp_size_override: Optional tensor_parallel_size override.
-        gpu_memory_utilization: Optional GPU memory fraction override.
 
     Returns:
         List of 3 lists of judgement result dicts.
@@ -470,8 +464,6 @@ def run_agent_turn_same_model(
     cfg_override = dict(config.get("judge_models", {}).get(model_key, {}))
     if tp_size_override is not None:
         cfg_override["tensor_parallel_size"] = tp_size_override
-    if gpu_memory_utilization is not None:
-        cfg_override["gpu_memory_utilization"] = gpu_memory_utilization
     cfg_override["max_num_seqs"] = _DEBATE_MAX_NUM_SEQS.get(model_key, 6)
 
     return _run_in_subprocess(_worker_same_model_agents, {
@@ -491,7 +483,6 @@ def run_debate(
     student_results: list[dict],
     dataset_name: str,
     tp_size_override: Optional[int] = None,
-    gpu_memory_utilization: Optional[float] = None,
 ) -> dict:
     """Run the full debate loop for one combination.
 
@@ -501,7 +492,6 @@ def run_debate(
         student_results: List of student solution dicts.
         dataset_name: Dataset name.
         tp_size_override: Optional tensor_parallel_size override.
-        gpu_memory_utilization: Optional GPU memory fraction override.
 
     Returns:
         Debate state dict with final verdicts for all problems.
@@ -537,7 +527,6 @@ def run_debate(
             all_agent_results = run_agent_turn_same_model(
                 combo_models[0], combo_temps, current_problems,
                 round_num, dataset_name, debate_state, tp_size_override,
-                gpu_memory_utilization,
             )
             for agent_idx, agent_results in enumerate(all_agent_results):
                 for result in agent_results:
@@ -552,7 +541,6 @@ def run_debate(
                     combo_models[agent_idx], combo_temps[agent_idx],
                     current_problems, round_num, dataset_name,
                     debate_state, agent_idx, tp_size_override,
-                    gpu_memory_utilization,
                 )
                 for result in agent_results:
                     pid = result["problem_id"]
