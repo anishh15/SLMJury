@@ -21,6 +21,10 @@ def main():
         help="Directory containing student solution files",
     )
     parser.add_argument("--output-dir", default="results/judgements")
+    parser.add_argument(
+        "--force", action="store_true",
+        help="Re-judge even if judgement files already exist",
+    )
 
     # Hardware overrides
     parser.add_argument(
@@ -58,7 +62,10 @@ def main():
         model_config=model_config or None,
     )
 
+    output_dir = Path(args.output_dir)
     solutions_dir = Path(args.solutions_dir)
+    skipped = 0
+
     for student_dir in sorted(solutions_dir.iterdir()):
         if not student_dir.is_dir():
             continue
@@ -67,10 +74,23 @@ def main():
         for solution_file in sorted(student_dir.glob("*.json")):
             dataset = solution_file.stem
 
-            with open(solution_file) as f:
-                student_results = json.load(f)
-
             for max_tokens in token_settings:
+                # Skip if judgement file already exists (unless --force)
+                out_file = (
+                    output_dir / args.judge
+                    / f"{student_model}_{dataset}_t{max_tokens}.json"
+                )
+                if out_file.exists() and not args.force:
+                    logger.info(
+                        "SKIP %s × %s (tokens=%d) — already judged",
+                        student_model, dataset, max_tokens,
+                    )
+                    skipped += 1
+                    continue
+
+                with open(solution_file) as f:
+                    student_results = json.load(f)
+
                 logger.info(
                     "Judging %s × %s (tokens=%d)", student_model, dataset, max_tokens,
                 )
@@ -78,6 +98,8 @@ def main():
                 judge.save_results(results, student_model, dataset, max_tokens)
 
     judge.cleanup()
+    if skipped:
+        logger.info("Skipped %d already-judged combinations (use --force to re-judge).", skipped)
     logger.info("All evaluations complete.")
 
 
