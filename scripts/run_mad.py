@@ -41,6 +41,10 @@ def main():
         help="Directory containing student solution files",
     )
     parser.add_argument("--output-dir", default="results/multi_agent_debate")
+    parser.add_argument(
+        "--force", action="store_true",
+        help="Re-run even if debate result files already exist",
+    )
 
     # Hardware overrides
     parser.add_argument(
@@ -83,6 +87,7 @@ def main():
     else:
         combo_indices = [int(i) for i in args.combo_index.split(",")]
 
+    skipped = 0
     for idx in combo_indices:
         combo_models, combo_temps = MAD_COMBINATIONS[idx]
         combo_name = make_combo_name(combo_models, combo_temps)
@@ -98,6 +103,16 @@ def main():
 
             for solution_file in sorted(student_dir.glob("*.json")):
                 dataset = solution_file.stem
+
+                # Skip if result file already exists (unless --force)
+                out_file = output_dir / combo_name / f"{student_model}_{dataset}.json"
+                if out_file.exists() and not args.force:
+                    logger.info(
+                        "  SKIP %s × %s — already debated",
+                        student_model, dataset,
+                    )
+                    skipped += 1
+                    continue
 
                 with open(solution_file) as f:
                     student_results = json.load(f)
@@ -135,6 +150,8 @@ def main():
 
         logger.info("Combo %d complete: %s", idx, combo_name)
 
+    if skipped:
+        logger.info("Skipped %d already-completed debates (use --force to re-run).", skipped)
     logger.info("All debate experiments complete.")
 
 
