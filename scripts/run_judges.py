@@ -35,6 +35,10 @@ def main():
         "--gpu-memory-utilization", "--gpu-mem", type=float, default=None,
         help="Override gpu_memory_utilization from models.yaml",
     )
+    parser.add_argument(
+        "--max-num-seqs", type=int, default=None,
+        help="Override max_num_seqs from models.yaml (lower = less KV cache pressure)",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -55,6 +59,8 @@ def main():
         model_config["tensor_parallel_size"] = args.tensor_parallel_size
     if args.gpu_memory_utilization is not None:
         model_config["gpu_memory_utilization"] = args.gpu_memory_utilization
+    if args.max_num_seqs is not None:
+        model_config["max_num_seqs"] = args.max_num_seqs
 
     judge = JudgeModel(
         args.judge,
