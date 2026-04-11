@@ -48,6 +48,10 @@ def main():
         help="Directory containing student solution files",
     )
     parser.add_argument("--output-dir", default="results/persona_effect")
+    parser.add_argument(
+        "--force", action="store_true",
+        help="Re-run even if persona result files already exist",
+    )
 
     # Hardware overrides
     parser.add_argument(
@@ -107,6 +111,7 @@ def main():
         )
         judge = JudgeModel(judge_key, model_config=model_config or None)
 
+        skipped = 0
         for student_dir in sorted(solutions_dir.iterdir()):
             if not student_dir.is_dir():
                 continue
@@ -115,11 +120,25 @@ def main():
             for solution_file in sorted(student_dir.glob("*.json")):
                 dataset = solution_file.stem
 
-                with open(solution_file) as f:
-                    student_results = json.load(f)
-
                 for max_tokens in token_settings:
                     for persona_name, persona_prompt in personas.items():
+                        # Skip if result file already exists (unless --force)
+                        out_file = (
+                            output_dir / judge_key
+                            / f"{persona_name}_{student_model}_{dataset}_t{max_tokens}.json"
+                        )
+                        if out_file.exists() and not args.force:
+                            logger.info(
+                                "SKIP %s + %s: %s × %s (tokens=%d) — already exists",
+                                judge_key, persona_name,
+                                student_model, dataset, max_tokens,
+                            )
+                            skipped += 1
+                            continue
+
+                        with open(solution_file) as f:
+                            student_results = json.load(f)
+
                         logger.info(
                             "%s + %s: %s × %s (tokens=%d, n=%d)",
                             judge_key, persona_name,
@@ -139,6 +158,8 @@ def main():
                         )
 
         judge.cleanup()
+        if skipped:
+            logger.info("Skipped %d already-completed persona runs (use --force to re-run).", skipped)
         logger.info("Completed all personas for %s", judge_key)
 
     logger.info("All persona evaluations complete.")
