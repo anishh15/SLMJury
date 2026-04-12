@@ -7,7 +7,7 @@
 set -e
 
 echo "Running evaluations with summary generation..."
-python scripts/run_evaluations.py --summary
+python scripts/run_evaluation.py --summary
 
 echo ""
 echo "All evaluations and summaries complete."

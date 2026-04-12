@@ -44,7 +44,7 @@ for MODEL in "${MODELS[@]}"; do
     echo "============================================================"
     echo "  [$COUNT/$TOTAL] Judge: $MODEL"
     echo "============================================================"
-    CUDA_VISIBLE_DEVICES=$GPUS python scripts/run_judges.py \
+    CUDA_VISIBLE_DEVICES=$GPUS python scripts/run_judge.py \
         --judge "$MODEL" \
         --tensor-parallel-size $TP_SIZE \
         --gpu-memory-utilization $GPU_MEM_UTIL

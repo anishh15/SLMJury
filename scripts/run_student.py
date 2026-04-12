@@ -1,4 +1,11 @@
-"""CLI entry-point: run student model inference across datasets."""
+"""CLI entry-point: run a single student model across datasets.
+
+Usage:
+    python scripts/run_student.py --model qwen2.5-32b --datasets gsm8k math
+
+    # Run all student models — use the bash wrapper:
+    #   bash bash/run_students.sh
+"""
 
 import argparse
 import logging

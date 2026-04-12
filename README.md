@@ -167,13 +167,13 @@ summary = evaluator.evaluate()
 
 ```bash
 # Run student model inference
-python scripts/run_students.py --model qwen2.5-32b --datasets gsm8k math
+python scripts/run_student.py --model qwen2.5-32b --datasets gsm8k math
 
 # Run judge evaluations
-python scripts/run_judges.py --judge qwen3-4b --max-tokens 10 8192
+python scripts/run_judge.py --judge qwen3-4b --max-tokens 10 8192
 
 # Evaluate all judgements and generate summary
-python scripts/run_evaluations.py --judgements-dir results/judgements
+python scripts/run_evaluation.py --summary
 ```
 
 <details>

@@ -29,7 +29,7 @@ for MODEL in "${MODELS[@]}"; do
     echo "============================================================"
     echo "  [$COUNT/$TOTAL] Persona: $MODEL"
     echo "============================================================"
-    CUDA_VISIBLE_DEVICES=$GPUS python scripts/run_personas.py \
+    CUDA_VISIBLE_DEVICES=$GPUS python scripts/run_persona.py \
         --judge "$MODEL" \
         --tensor-parallel-size $TP_SIZE \
         --gpu-memory-utilization $GPU_MEM_UTIL

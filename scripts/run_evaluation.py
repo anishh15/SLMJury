@@ -1,4 +1,9 @@
-"""CLI entry-point: evaluate all judgement files and generate summary reports."""
+"""CLI entry-point: evaluate judgement files and generate summary reports.
+
+Usage:
+    python scripts/run_evaluation.py --summary
+    python scripts/run_evaluation.py --judge-model qwen3-4b --max-tokens 10
+"""
 
 import argparse
 import json

@@ -22,7 +22,7 @@ for MODEL in "${MODELS[@]}"; do
     echo "============================================================"
     echo "  Student solver: $MODEL"
     echo "============================================================"
-    CUDA_VISIBLE_DEVICES=$GPUS python scripts/run_students.py \
+    CUDA_VISIBLE_DEVICES=$GPUS python scripts/run_student.py \
         --model "$MODEL" \
         --tensor-parallel-size $TP_SIZE \
         --gpu-memory-utilization $GPU_MEM_UTIL

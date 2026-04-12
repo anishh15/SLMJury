@@ -1,4 +1,11 @@
-"""CLI entry-point: run judge model evaluation across student solutions."""
+"""CLI entry-point: run a single judge model across student solutions.
+
+Usage:
+    python scripts/run_judge.py --judge qwen3-4b --max-tokens 10 8192
+
+    # Run all 16 judge models — use the bash wrapper:
+    #   bash bash/run_judges.sh
+"""
 
 import argparse
 import json

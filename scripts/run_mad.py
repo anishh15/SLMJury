@@ -1,18 +1,15 @@
-"""CLI entry-point: run multi-agent debate (MAD) experiments.
+"""CLI entry-point: run multi-agent debate (MAD) for a single combo.
 
-Runs debate combinations across all student-dataset combos. Each combo
+Runs a debate combination across all student-dataset combos. Each combo
 involves 3 agents debating for up to 5 rounds to reach consensus, with
 majority vote fallback.
 
 Usage:
-    # Run a specific combo by index (0-9)
-    CUDA_VISIBLE_DEVICES=2,3 python scripts/run_mad.py --combo-index 0
+    python scripts/run_mad.py --combo-index 0
+    python scripts/run_mad.py --combo-index 0,3,5 --tp 1 --gpu-mem 0.85
 
-    # Run all 10 combos sequentially
-    CUDA_VISIBLE_DEVICES=2,3 python scripts/run_mad.py --combo-index all
-
-    # Run with hardware overrides
-    python scripts/run_mad.py --combo-index 0 --tp 1 --gpu-mem 0.8
+    # Run all 10 combos — use the bash wrapper:
+    #   bash bash/run_mad.sh
 """
 
 import argparse
