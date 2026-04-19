@@ -52,6 +52,10 @@ def main():
         "--gpu-memory-utilization", "--gpu-mem", type=float, default=None,
         help="Override gpu_memory_utilization for all models",
     )
+    parser.add_argument(
+        "--max-num-seqs", type=int, default=None,
+        help="Override max_num_seqs for all models (lower = less KV cache pressure)",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -63,20 +67,31 @@ def main():
     solutions_dir = Path(args.solutions_dir)
     output_dir = Path(args.output_dir)
 
-    # Apply gpu_memory_utilization override via config patching
-    if args.gpu_memory_utilization is not None:
+    # Apply hardware overrides via config patching
+    if args.gpu_memory_utilization is not None or args.max_num_seqs is not None:
         import slmjury.strategies.debate as dmod
         _orig = dmod.load_models_config
         mem_util = args.gpu_memory_utilization
+        max_num_seqs = args.max_num_seqs
 
         def _patched():
             c = _orig()
             for v in c.get("judge_models", {}).values():
-                v["gpu_memory_utilization"] = mem_util
+                if mem_util is not None:
+                    v["gpu_memory_utilization"] = mem_util
+                if max_num_seqs is not None:
+                    v["max_num_seqs"] = max_num_seqs
             return c
 
         dmod.load_models_config = _patched
-        logger.info("GPU memory utilization override: %.2f", mem_util)
+        if mem_util is not None:
+            logger.info("GPU memory utilization override: %.2f", mem_util)
+        if max_num_seqs is not None:
+            # Also patch _DEBATE_MAX_NUM_SEQS — debate.py hardcodes per-model
+            # values that would silently overwrite the config-level override.
+            for k in dmod._DEBATE_MAX_NUM_SEQS:
+                dmod._DEBATE_MAX_NUM_SEQS[k] = max_num_seqs
+            logger.info("max_num_seqs override: %d", max_num_seqs)
 
     # Determine which combos to run
     if args.combo_index.lower() == "all":
