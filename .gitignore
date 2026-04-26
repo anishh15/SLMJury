@@ -59,3 +59,12 @@ models/
 website/node_modules/
 website/dist/
 website/.env
+
+# HuggingFace model download lock files
+*.lock
+
+# Backup files
+*.bak
+
+# PyTorch compilation cache
+torchinductor_*/
