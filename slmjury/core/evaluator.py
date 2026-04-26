@@ -293,7 +293,7 @@ def parse_judgement_filename(filename: str) -> tuple[str, str, int]:
     """
     name = Path(filename).stem
     match = re.match(
-        r"^(.+?)_(gsm8k|gsm_plus|math|arc_easy|arc_challenge|hellaswag|winogrande|truthfulqa)_t(\d+)$",
+        r"^(.+?)_(gsm8k|gsm_plus|math|arc_easy|arc_challenge|hellaswag|winogrande|truthfulqa|summeval|mtbench)_t(\d+)$",
         name,
     )
     if match is None:

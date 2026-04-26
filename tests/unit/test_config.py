@@ -24,6 +24,7 @@ class TestLoadModelsConfig:
         expected = [
             "gsm8k", "gsm_plus", "math", "arc_easy", "arc_challenge",
             "hellaswag", "winogrande", "truthfulqa",
+            "summeval", "mtbench",
         ]
         assert config["datasets"] == expected
 

@@ -6,7 +6,8 @@ multi-agent debate, and persona effects.
 
 Key Features:
 - 16 SLM judges across Qwen, Llama, and Phi-4 model families
-- 5 datasets (GSM8K, GSM-Plus, MATH, ARC-Easy, ARC-Challenge)
+- 10 datasets (GSM8K, GSM-Plus, MATH, ARC, HellaSwag, WinoGrande, TruthfulQA, SummEval, MT-Bench)
+- Closed-ended (verdict) and open-ended (scoring) evaluation pipelines
 - Majority voting ensembles from top-5 judges
 - Multi-agent debate with RCR prompting
 - 6 persona system prompts for bias analysis
@@ -23,6 +24,7 @@ from slmjury.configs import load_models_config
 from slmjury.parsers.answer import extract_answer, get_dataset_type
 from slmjury.parsers.judgement import parse_judgement, parse_judgement_detailed
 from slmjury.parsers.normalizer import answers_are_equivalent, normalize_numeric
+from slmjury.parsers.score import parse_score, parse_multi_score
 
 # Data loaders
 from slmjury.data import load_dataset
@@ -41,6 +43,8 @@ __all__ = [
     "parse_judgement_detailed",
     "answers_are_equivalent",
     "normalize_numeric",
+    "parse_score",
+    "parse_multi_score",
     # Data
     "load_dataset",
     # Strategies

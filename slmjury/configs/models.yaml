@@ -13,6 +13,15 @@ student_models:
     gpu_memory_utilization: 0.85
     max_model_len: 32768
 
+# Oracle model for MT-Bench scoring (run by supervisor)
+oracle_models:
+  gpt-oss-120b:
+    model: "openai/gpt-oss-120b"
+    tensor_parallel_size: 4
+    gpu_memory_utilization: 0.9
+    max_num_seqs: 16
+    dtype: "auto"
+
 judge_models:
   # Qwen 2.5 family
   qwen2.5-1.5b:
@@ -112,6 +121,7 @@ judge_models:
 
 # Datasets supported
 datasets:
+  # Closed-ended (verdict: Correct/Incorrect)
   - gsm8k
   - gsm_plus
   - math
@@ -120,6 +130,9 @@ datasets:
   - hellaswag
   - winogrande
   - truthfulqa
+  # Open-ended (scoring: 1-5)
+  - summeval
+  - mtbench
 
 # Token settings for judge evaluation
 token_settings:
@@ -129,6 +142,16 @@ token_settings:
   reasoned:
     max_tokens: 8192
     description: "Reasoning + boxed verdict"
+
+# Open-ended evaluation settings
+open_ended_settings:
+  score_scale: 5          # 1-5 for both datasets
+  binary_threshold: 4     # ≥4 = GOOD for Cohen's κ
+  summeval_dimensions:
+    - coherence
+    - consistency
+    - fluency
+    - relevance
 
 # Top-5 judges for majority voting ensembles (from individual evaluation results)
 ensemble_judges:

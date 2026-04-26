@@ -8,6 +8,8 @@ from slmjury.data.arc_challenge import load_arc_challenge
 from slmjury.data.hellaswag import load_hellaswag
 from slmjury.data.winogrande import load_winogrande
 from slmjury.data.truthfulqa import load_truthfulqa
+from slmjury.data.summeval import load_summeval
+from slmjury.data.mtbench import load_mtbench
 
 DATASET_LOADERS = {
     "gsm8k": load_gsm8k,
@@ -18,6 +20,8 @@ DATASET_LOADERS = {
     "hellaswag": load_hellaswag,
     "winogrande": load_winogrande,
     "truthfulqa": load_truthfulqa,
+    "summeval": load_summeval,
+    "mtbench": load_mtbench,
 }
 
 
@@ -25,7 +29,7 @@ def load_dataset(name: str, **kwargs) -> list[dict]:
     """Load a dataset by name.
 
     Supported: gsm8k, gsm_plus, math, arc_easy, arc_challenge,
-    hellaswag, winogrande, truthfulqa.
+    hellaswag, winogrande, truthfulqa, summeval, mtbench.
     """
     if name not in DATASET_LOADERS:
         raise ValueError(f"Unknown dataset: {name}. Choose from: {list(DATASET_LOADERS.keys())}")
@@ -42,5 +46,7 @@ __all__ = [
     "load_hellaswag",
     "load_winogrande",
     "load_truthfulqa",
+    "load_summeval",
+    "load_mtbench",
     "DATASET_LOADERS",
 ]
