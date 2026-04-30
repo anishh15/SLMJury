@@ -154,16 +154,17 @@ open_ended_settings:
     - relevance
 
 # Top-5 judges for majority voting ensembles (from individual evaluation results)
+# Ranked by overall accuracy across 8 datasets
 ensemble_judges:
-  - key: "qwen3-4b"
+  - key: "phi4-14b"
     tokens: 10
-  - key: "phi4mi-3.8b"
+  - key: "qwen3-14b"
     tokens: 10
-  - key: "qwen2.5-3b"
+  - key: "qwen3-8b"
     tokens: 10
-  - key: "qwen3-1.7b"
+  - key: "phi4rp-14b"
     tokens: 8192
-  - key: "qwen2.5-1.5b"
+  - key: "phi4r-14b"
     tokens: 8192
 
 # Persona prompts are defined in slmjury/strategies/persona.py

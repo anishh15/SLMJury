@@ -25,6 +25,21 @@ const PERSONA_LABELS = {
   logic: 'Logic', safety: 'Safety', strict: 'Strict',
 }
 
+/** All 8 closed-ended datasets grouped by category */
+const DATASETS = [
+  // Math
+  { key: 'gsm8k_acc', label: 'GSM8K', short: 'GSM8K', color: 'text-bb-accent' },
+  { key: 'gsm_plus_acc', label: 'GSM-Plus', short: 'GSM+', color: 'text-bb-teal' },
+  { key: 'math_acc', label: 'MATH', short: 'MATH', color: 'text-bb-mint' },
+  // Science
+  { key: 'arc_easy_acc', label: 'ARC-Easy', short: 'ARC-E', color: 'text-bb-cyan' },
+  { key: 'arc_challenge_acc', label: 'ARC-Challenge', short: 'ARC-C', color: 'text-bb-purple' },
+  // General
+  { key: 'hellaswag_acc', label: 'HellaSwag', short: 'Hella', color: 'text-orange-400' },
+  { key: 'winogrande_acc', label: 'WinoGrande', short: 'Wino', color: 'text-pink-400' },
+  { key: 'truthfulqa_acc', label: 'TruthfulQA', short: 'TQA', color: 'text-sky-400' },
+]
+
 const TABS = [
   { id: 'phase1', label: 'Individual Judges', icon: Brain },
   { id: 'majority', label: 'Majority Voting', icon: Users },
@@ -187,11 +202,11 @@ function DetailRow({ m, colSpan, isDark }) {
   return (
     <tr className={isDark ? 'bg-bb-dark-400/30' : 'bg-bb-light-200/40'}>
       <td colSpan={colSpan} className="px-6 py-5">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm animate-fade-in">
-          {[{ label: 'GSM8K', val: m.gsm8k_acc, color: isDark ? 'text-bb-accent' : 'text-bb-accent-dark' }, { label: 'GSM-Plus', val: m.gsm_plus_acc, color: 'text-bb-teal' }, { label: 'MATH', val: m.math_acc, color: 'text-bb-mint' }, { label: 'ARC-Easy', val: m.arc_easy_acc, color: 'text-bb-cyan' }, { label: 'ARC-Challenge', val: m.arc_challenge_acc, color: 'text-bb-purple' }].map(({ label, val, color }) => (
-            <div key={label} className={`p-3 rounded-lg ${isDark ? 'bg-bb-dark-300/40' : 'bg-white/60'}`}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3 text-sm animate-fade-in">
+          {DATASETS.map(({ key, label, color }) => (
+            <div key={key} className={`p-3 rounded-lg ${isDark ? 'bg-bb-dark-300/40' : 'bg-white/60'}`}>
               <div className={`text-[10px] uppercase tracking-wider mb-2 font-semibold ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>{label}</div>
-              <div className={`${color} font-mono font-semibold`}>{fmt(val)}%</div>
+              <div className={`${isDark ? color : color.replace('text-bb-accent', 'text-bb-accent-dark')} font-mono font-semibold`}>{fmt(m[key])}%</div>
             </div>
           ))}
         </div>
@@ -253,13 +268,9 @@ function EnsembleTable({ data, description }) {
           <thead>
             <tr className={`border-b ${isDark ? 'border-bb-dark-50/20 bg-bb-dark-400/40' : 'border-bb-light-300/50 bg-bb-light-100/80'}`}>
               <th className={`px-2 py-3 text-[11px] font-semibold uppercase tracking-wider text-center w-10 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>#</th>
-              <th className={`px-2 py-3 text-[11px] font-semibold uppercase tracking-wider text-left ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Ensemble</th>
+              <th className={`px-2 py-3 text-[11px] font-semibold uppercase tracking-wider text-left min-w-[340px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Ensemble</th>
               <SortHeader k="accuracy">Overall</SortHeader>
-              <SortHeader k="gsm8k_acc">GSM8K</SortHeader>
-              <SortHeader k="gsm_plus_acc">GSM+</SortHeader>
-              <SortHeader k="math_acc">MATH</SortHeader>
-              <SortHeader k="arc_easy_acc">ARC-E</SortHeader>
-              <SortHeader k="arc_challenge_acc">ARC-C</SortHeader>
+              {DATASETS.map(d => <SortHeader key={d.key} k={d.key}>{d.short}</SortHeader>)}
               <SortHeader k="ifr">IFR</SortHeader>
             </tr>
           </thead>
@@ -272,11 +283,11 @@ function EnsembleTable({ data, description }) {
                   <tr key={m.ensemble_name} className={`border-b cursor-pointer transition-all duration-150 ${isDark ? `border-bb-dark-50/10 ${isExpanded ? 'bg-bb-dark-300/40' : i < 3 ? 'bg-bb-accent/[0.02] hover:bg-bb-dark-300/30' : 'hover:bg-bb-dark-300/20'}` : `border-bb-light-300/30 ${isExpanded ? 'bg-bb-light-200/60' : i < 3 ? 'bg-bb-accent-dark/[0.03] hover:bg-bb-light-200/40' : 'hover:bg-bb-light-200/40'}`}`} onClick={() => setExpandedRow(isExpanded ? null : m.ensemble_name)}>
                     <RankCell rank={i + 1} isDark={isDark} />
                     <td className="px-2 py-3">
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-nowrap items-center gap-1">
                         {m.judges?.map((j, idx) => {
                           const familyColor = FAMILY_COLORS[j.family] || '#6b7280'
                           return (
-                            <span key={idx} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[13px] font-medium ${isDark ? 'bg-bb-dark-400/60 text-gray-300' : 'bg-bb-light-200/80 text-gray-600'}`}>
+                            <span key={idx} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[12px] font-medium whitespace-nowrap ${isDark ? 'bg-bb-dark-400/60 text-gray-300' : 'bg-bb-light-200/80 text-gray-600'}`}>
                               <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: familyColor }} />
                               {j.name}
                               <span className={`text-[9px] font-mono ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>{j.tokens != null ? `t=${j.tokens}` : (j.temperature != null ? `T=${j.temperature}` : '')}</span>
@@ -289,14 +300,10 @@ function EnsembleTable({ data, description }) {
                       <span className={`font-mono text-[13px] font-semibold ${isDark ? 'text-bb-accent' : 'text-bb-accent-dark'}`}>{fmt(m.accuracy)}%</span>
                       <Delta value={m.accuracy} base={base} />
                     </td>
-                    <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{fmt(m.gsm8k_acc)}%</td>
-                    <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{fmt(m.gsm_plus_acc)}%</td>
-                    <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{fmt(m.math_acc)}%</td>
-                    <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{fmt(m.arc_easy_acc)}%</td>
-                    <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{fmt(m.arc_challenge_acc)}%</td>
+                    {DATASETS.map(d => <td key={d.key} className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{fmt(m[d.key])}%</td>)}
                     <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{fmt(m.ifr)}%</td>
                   </tr>
-                  {isExpanded && <DetailRow key={`${m.ensemble_name}-d`} m={m} colSpan={9} isDark={isDark} />}
+                  {isExpanded && <DetailRow key={`${m.ensemble_name}-d`} m={m} colSpan={DATASETS.length + 4} isDark={isDark} />}
                 </>
               )
             })}
@@ -385,11 +392,7 @@ function Phase1Table() {
                 <SortHeader k="model" className="text-left">Model</SortHeader>
                 <th className={`px-2 py-3 text-[11px] font-semibold uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Max Tokens</th>
                 <SortHeader k="accuracy">Overall</SortHeader>
-                <SortHeader k="gsm8k_acc">GSM8K</SortHeader>
-                <SortHeader k="gsm_plus_acc">GSM+</SortHeader>
-                <SortHeader k="math_acc">MATH</SortHeader>
-                <SortHeader k="arc_easy_acc">ARC-E</SortHeader>
-                <SortHeader k="arc_challenge_acc">ARC-C</SortHeader>
+                {DATASETS.map(d => <SortHeader key={d.key} k={d.key}>{d.short}</SortHeader>)}
                 <SortHeader k="ifr">IFR</SortHeader>
               </tr>
             </thead>
@@ -408,14 +411,10 @@ function Phase1Table() {
                       </td>
                       <TokenCell tokens={m.tokens} isDark={isDark} />
                       <td className="px-2 py-3 text-center whitespace-nowrap"><span className={`font-mono text-[13px] font-semibold ${isDark ? 'text-bb-accent' : 'text-bb-accent-dark'}`}>{fmt(m.accuracy)}%</span></td>
-                      <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{fmt(m.gsm8k_acc)}%</td>
-                      <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{fmt(m.gsm_plus_acc)}%</td>
-                      <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{fmt(m.math_acc)}%</td>
-                      <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{fmt(m.arc_easy_acc)}%</td>
-                      <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{fmt(m.arc_challenge_acc)}%</td>
+                      {DATASETS.map(d => <td key={d.key} className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{fmt(m[d.key])}%</td>)}
                       <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{fmt(m.ifr)}%</td>
                     </tr>
-                    {isExpanded && <DetailRow key={`${key}-d`} m={m} colSpan={10} isDark={isDark} />}
+                    {isExpanded && <DetailRow key={`${key}-d`} m={m} colSpan={DATASETS.length + 5} isDark={isDark} />}
                   </>
                 )
               })}
@@ -584,8 +583,8 @@ export default function Leaderboard() {
       <AnimateIn delay={700} direction="up">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
           <StatCard icon={Brain} label="Judge Models" value="16" sub="0.6B to 14B parameters" />
-          <StatCard icon={Database} label="Problems Evaluated" value="20K+" sub="Across 5 benchmark datasets" />
-          <StatCard icon={Layers} label="Total Experiments" value="2,400+" sub="Judges × Students × Settings" />
+          <StatCard icon={Database} label="Problems Evaluated" value="32K+" sub="Across 8 benchmark datasets" />
+          <StatCard icon={Layers} label="Total Experiments" value="4,000+" sub="Judges × Students × Settings" />
           <StatCard icon={FlaskConical} label="Evaluation Techniques" value="4" sub="Token Budget · Persona · Ensemble · Debate" />
         </div>
       </AnimateIn>
@@ -631,7 +630,7 @@ export default function Leaderboard() {
           <>
             <div className={`rounded-xl p-4 mb-6 ${isDark ? 'bg-bb-dark-300/40 border border-bb-dark-50/20' : 'bg-white/60 border border-bb-light-300/40 shadow-sm'}`}>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                <span className="font-semibold">Majority Voting Ensembles:</span> C(5,3) = 10 combinations of the top 5 small judges. Each problem is judged by 3 models and the majority verdict wins.
+                <span className="font-semibold">Majority Voting Ensembles:</span> C(5,3) = 10 combinations of the top 5 judges. Each problem is judged by 3 models and the majority verdict wins.
                 <span className={`ml-2 text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>t=10 (Concise) · t=8192 (Reasoned)</span>
               </p>
             </div>

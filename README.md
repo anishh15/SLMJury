@@ -25,7 +25,7 @@
 
 | | Date | Update |
 |:---:|:---|:---|
-| 🚀 | **Mar 2026** | v0.1.0 released — 16 judges, 5 datasets, 3 strategies, 6 personas. [See README](#-quick-start) |
+| 🚀 | **Mar 2026** | v0.1.0 released — 16 judges, 8 datasets, 3 strategies, 6 personas. [See README](#-quick-start) |
 | 🏆 | **Mar 2026** | Interactive leaderboard launched: [SLMJury Leaderboard](https://anishh15.github.io/SLMJury/) |
 | 📄 | **Mar 2026** | Paper submitted to arXiv |
 
@@ -137,6 +137,8 @@ from slmjury.data import load_dataset
 problems = load_dataset("gsm8k")           # GSM8K math problems (1,319)
 problems = load_dataset("math")            # MATH competition problems (5,000)
 problems = load_dataset("arc_challenge")   # ARC-Challenge science (1,172)
+problems = load_dataset("hellaswag")       # HellaSwag commonsense (10,042)
+problems = load_dataset("truthfulqa")      # TruthfulQA factuality (684)
 ```
 
 ### 🔬 Full Pipeline *(requires GPU + vLLM)*
@@ -228,10 +230,13 @@ persona_results = run_all_personas("qwen3-4b", results, "qwen2.5-32b", "gsm8k", 
 | Dataset | Type | Domain | Size |
 |---------|------|--------|------|
 | **GSM8K** | Numeric | Math | 1,319 |
-| **GSM-Plus** | Numeric | Math | 1,319 |
+| **GSM-Plus** | Numeric | Math | 10,552 |
 | **MATH** | LaTeX | Math | 5,000 |
 | **ARC-Easy** | Multiple Choice | Science | 2,376 |
 | **ARC-Challenge** | Multiple Choice | Science | 1,172 |
+| **HellaSwag** | Multiple Choice | General | 10,042 |
+| **WinoGrande** | Multiple Choice | General | 1,267 |
+| **TruthfulQA** | Multiple Choice | General | 684 |
 
 ---
 
