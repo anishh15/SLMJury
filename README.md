@@ -13,7 +13,7 @@
 
 *Can Small Language Models Judge Reasoning as Well as Large Ones?*
 
-**🧑‍⚖️ 16 SLM Judges &bull; 📊 5 Datasets &bull; 🗳️ 3 Advanced Strategies &bull; 🎭 6 Persona Prompts**
+**🧑‍⚖️ 16 SLM Judges &bull; 📊 8 Datasets &bull; 🗳️ 3 Advanced Strategies &bull; 🎭 6 Persona Prompts**
 
 [**🏆 Leaderboard**](https://anishh15.github.io/SLMJury/) | [**📖 Paper**](https://arxiv.org/abs/XXXX.XXXXX) | [**📦 PyPI**](https://pypi.org/project/slmjury/) | [**🚀 Get Started**](#-installation)
 
@@ -219,11 +219,11 @@ persona_results = run_all_personas("qwen3-4b", results, "qwen2.5-32b", "gsm8k", 
 <tr><td><b>Qwen 2.5</b></td><td>1.5B, 3B, 7B</td><td align="center">1.5B – 7B</td><td align="center">—</td></tr>
 <tr><td><b>Qwen 3</b></td><td>0.6B, 1.7B, 4B, 8B, 14B</td><td align="center">0.6B – 14B</td><td align="center">✅</td></tr>
 <tr><td><b>Llama 3.x</b></td><td>3.2-1B, 3.2-3B, 3.1-8B</td><td align="center">1B – 8B</td><td align="center">—</td></tr>
-<tr><td><b>Phi-4</b></td><td>14B, Reasoning, R-Plus, Mini, Mini-Reasoning, Mini-Flash</td><td align="center">3.8B – 14B</td><td align="center">✅*</td></tr>
+<tr><td><b>Phi-4</b></td><td>14B, Reasoning, R-Plus, Mini, Mini-Reasoning</td><td align="center">3.8B – 14B</td><td align="center">✅*</td></tr>
 </tbody>
 </table>
 
-<sub>*Phi-4 Reasoning/Plus/Mini-Reasoning/Mini-Flash always use thinking mode and skip quick verdict evaluation.</sub>
+<sub>*Phi-4 Reasoning/Plus/Mini-Reasoning always use thinking mode and skip quick verdict (t=10) evaluation.</sub>
 
 ### 📊 Datasets
 
@@ -251,7 +251,7 @@ SLMJury/
 │   ├── core/                 # Pipeline: solver → judge → evaluator
 │   └── strategies/           # Ensemble voting, multi-agent debate, personas
 ├── scripts/                  # CLI entry-points
-├── tests/                    # 82 unit tests (pytest)
+├── tests/                    # 130+ unit tests (pytest)
 ├── website/                  # React leaderboard (Vite + Tailwind)
 ├── assets/                   # SVG banner and logo
 ├── pyproject.toml            # Package config (pip install -e .)
