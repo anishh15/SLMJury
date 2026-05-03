@@ -1,7 +1,9 @@
-"""CLI entry-point: generate student model responses for MT-Bench.
+"""CLI entry-point: generate student model responses for MT-Bench (2 turns).
 
 MT-Bench is open-ended — the student generates free-form responses to 80
-Turn-1 prompts. These responses are then scored by an oracle and SLM judges.
+questions, each with 2 turns. Turn 2 is a follow-up that depends on the
+model's Turn 1 response. These responses are then scored by oracle models
+and SLM judges.
 
 Usage:
     python scripts/run_mtbench_student.py --model llama3.1-8b
@@ -12,6 +14,7 @@ Usage:
 """
 
 import argparse
+import gc
 import json
 import logging
 from pathlib import Path
@@ -22,7 +25,7 @@ from slmjury.data import load_dataset
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate student responses for MT-Bench Turn-1 prompts.",
+        description="Generate student responses for MT-Bench (2 turns).",
     )
     parser.add_argument(
         "--model", required=True,
@@ -77,9 +80,9 @@ def main():
     if args.gpu_memory_utilization is not None:
         cfg["gpu_memory_utilization"] = args.gpu_memory_utilization
 
-    # Load MT-Bench prompts
+    # Load MT-Bench prompts (2 turns per question)
     prompts = load_dataset("mtbench")
-    logger.info("Loaded %d MT-Bench Turn-1 prompts", len(prompts))
+    logger.info("Loaded %d MT-Bench questions (2 turns each)", len(prompts))
 
     # Load model
     from vllm import LLM, SamplingParams
@@ -103,28 +106,59 @@ def main():
     logger.info("Loading student model: %s", cfg["model"])
     llm = LLM(**vllm_kwargs)
 
-    # Generate responses
-    chat_prompts = [
+    params = SamplingParams(temperature=0.7, max_tokens=2048, top_p=0.9)
+
+    # --- Turn 1: Generate responses for all 80 questions ---
+    logger.info("Generating Turn 1 responses...")
+    turn1_chat_prompts = [
         tokenizer.apply_chat_template(
-            [{"role": "user", "content": p["question"]}],
+            [{"role": "user", "content": p["turn1"]}],
             tokenize=False,
             add_generation_prompt=True,
         )
         for p in prompts
     ]
 
-    params = SamplingParams(temperature=0.7, max_tokens=2048, top_p=0.9)
-    outputs = llm.generate(chat_prompts, params)
+    turn1_outputs = llm.generate(turn1_chat_prompts, params)
+    turn1_responses = [
+        output.outputs[0].text.strip() for output in turn1_outputs
+    ]
+    logger.info("Turn 1 complete: %d responses", len(turn1_responses))
 
+    # --- Turn 2: Build multi-turn conversations and generate ---
+    logger.info("Generating Turn 2 responses...")
+    turn2_chat_prompts = [
+        tokenizer.apply_chat_template(
+            [
+                {"role": "user", "content": p["turn1"]},
+                {"role": "assistant", "content": t1_resp},
+                {"role": "user", "content": p["turn2"]},
+            ],
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+        for p, t1_resp in zip(prompts, turn1_responses)
+    ]
+
+    turn2_outputs = llm.generate(turn2_chat_prompts, params)
+    turn2_responses = [
+        output.outputs[0].text.strip() for output in turn2_outputs
+    ]
+    logger.info("Turn 2 complete: %d responses", len(turn2_responses))
+
+    # --- Build results ---
     results = []
-    for prompt_data, output in zip(prompts, outputs):
-        response = output.outputs[0].text.strip()
+    for prompt_data, t1_resp, t2_resp in zip(
+        prompts, turn1_responses, turn2_responses,
+    ):
         results.append({
             "problem_id": prompt_data["problem_id"],
             "question_id": prompt_data["question_id"],
             "category": prompt_data["category"],
-            "question": prompt_data["question"],
-            "response": response,
+            "turn1_question": prompt_data["turn1"],
+            "turn1_response": t1_resp,
+            "turn2_question": prompt_data["turn2"],
+            "turn2_response": t2_resp,
             "student_model": args.model,
         })
 
@@ -133,10 +167,9 @@ def main():
     with open(out_file, "w") as f:
         json.dump(results, f, indent=4)
 
-    logger.info("Saved %d responses to %s", len(results), out_file)
+    logger.info("Saved %d responses (2 turns each) to %s", len(results), out_file)
 
     # Cleanup
-    import gc
     del llm, tokenizer
     gc.collect()
     try:

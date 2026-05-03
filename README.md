@@ -13,7 +13,7 @@
 
 *Can Small Language Models Judge Reasoning as Well as Large Ones?*
 
-**🧑‍⚖️ 16 SLM Judges &bull; 📊 8 Datasets &bull; 🗳️ 3 Advanced Strategies &bull; 🎭 6 Persona Prompts**
+**🧑‍⚖️ 16 SLM Judges &bull; 📊 10 Datasets &bull; 🗳️ 3 Advanced Strategies &bull; 🎭 6 Persona Prompts**
 
 [**🏆 Leaderboard**](https://anishh15.github.io/SLMJury/) | [**📖 Paper**](https://arxiv.org/abs/XXXX.XXXXX) | [**📦 PyPI**](https://pypi.org/project/slmjury/) | [**🚀 Get Started**](#-installation)
 
@@ -227,6 +227,8 @@ persona_results = run_all_personas("qwen3-4b", results, "qwen2.5-32b", "gsm8k", 
 
 ### 📊 Datasets
 
+**Closed-ended** (verdict: Correct/Incorrect):
+
 | Dataset | Type | Domain | Size |
 |---------|------|--------|------|
 | **GSM8K** | Numeric | Math | 1,319 |
@@ -238,6 +240,13 @@ persona_results = run_all_personas("qwen3-4b", results, "qwen2.5-32b", "gsm8k", 
 | **WinoGrande** | Multiple Choice | General | 1,267 |
 | **TruthfulQA** | Multiple Choice | General | 684 |
 
+**Open-ended** (scoring: 1–5):
+
+| Dataset | Type | Turns | Size | Oracle |
+|---------|------|-------|------|--------|
+| **SummEval** | Summarization | — | 1,600 pairs | Human annotations |
+| **MT-Bench** | Multi-turn chat | 2 | 80 questions | GPT-OSS-120B (Together API), Qwen3-235B (Cerebras API) |
+
 ---
 
 ## 🏗️ Project Structure
@@ -247,10 +256,11 @@ SLMJury/
 ├── slmjury/                  # Python package
 │   ├── configs/              # Centralized YAML model configurations
 │   ├── data/                 # Dataset loaders (HuggingFace → local JSON)
-│   ├── parsers/              # Answer extraction, normalization, verdict parsing
-│   ├── core/                 # Pipeline: solver → judge → evaluator
+│   ├── parsers/              # Answer extraction, normalization, verdict/score parsing
+│   ├── core/                 # Pipeline: solver → judge → evaluator + scoring
 │   └── strategies/           # Ensemble voting, multi-agent debate, personas
-├── scripts/                  # CLI entry-points
+├── scripts/                  # CLI entry-points (student, judge, oracle, scoring)
+├── bash/                     # Bash wrappers for full experiment runs
 ├── tests/                    # 130+ unit tests (pytest)
 ├── website/                  # React leaderboard (Vite + Tailwind)
 ├── assets/                   # SVG banner and logo

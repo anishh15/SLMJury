@@ -137,24 +137,29 @@ def main():
 
     elif args.dataset == "mtbench":
         data = load_dataset("mtbench")
-        logger.info("Loaded %d MT-Bench prompts", len(data))
+        logger.info("Loaded %d MT-Bench questions", len(data))
 
-        # MT-Bench requires student responses — check if they exist
-        # For now, expect pre-generated response+oracle data
-        if args.oracle_scores:
-            with open(args.oracle_scores) as f:
-                oracle_data = json.load(f)
-            # Merge oracle scores into data
-            for item, oracle in zip(data, oracle_data):
-                item["response"] = oracle["response"]
-                item["oracle_score"] = oracle["oracle_score"]
-        else:
+        # MT-Bench requires student responses + oracle scores
+        if not args.oracle_scores:
             logger.error(
                 "MT-Bench requires --oracle-scores with pre-generated "
                 "student responses and oracle scores."
             )
             judge.cleanup()
             return
+
+        with open(args.oracle_scores) as f:
+            oracle_data = json.load(f)
+
+        # Merge oracle data into MT-Bench prompts
+        for item, oracle in zip(data, oracle_data):
+            item["turn1_question"] = item["turn1"]
+            item["turn1_response"] = oracle["turn1_response"]
+            item["turn2_question"] = item["turn2"]
+            item["turn2_response"] = oracle["turn2_response"]
+            item["turn1_oracle_score"] = oracle["turn1_oracle_score"]
+            item["turn2_oracle_score"] = oracle["turn2_oracle_score"]
+            item["question_id"] = item.get("question_id", item["problem_id"])
 
         results = judge.score_mtbench(data, max_tokens=args.max_tokens)
         judge.save_results(results, "mtbench")
@@ -168,6 +173,14 @@ def main():
             overall.get("pearson"), overall.get("spearman"),
             overall.get("cohens_kappa"),
         )
+        for turn_name, turn_metrics in eval_result.get("per_turn", {}).items():
+            logger.info(
+                "  %s — r=%s, ρ=%s, κ=%s",
+                turn_name,
+                turn_metrics.get("pearson"),
+                turn_metrics.get("spearman"),
+                turn_metrics.get("cohens_kappa"),
+            )
 
     judge.cleanup()
     logger.info("Scoring evaluation complete for %s × %s", args.judge, args.dataset)

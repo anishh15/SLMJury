@@ -64,3 +64,23 @@ class TestLoadModelsConfig:
         config = load_models_config()
         phi4r = config["judge_models"]["phi4r-14b"]
         assert phi4r.get("always_thinks") is True
+
+    def test_has_oracle_models(self):
+        config = load_models_config()
+        assert "oracle_models" in config
+        assert len(config["oracle_models"]) == 2
+
+    def test_oracle_models_are_api_based(self):
+        config = load_models_config()
+        for key, oracle in config["oracle_models"].items():
+            assert "model" in oracle, f"{key} missing 'model' field"
+            assert "provider" in oracle, f"{key} missing 'provider' field"
+            assert "base_url" in oracle, f"{key} missing 'base_url' field"
+            assert "api_key_env" in oracle, f"{key} missing 'api_key_env' field"
+
+    def test_oracle_providers(self):
+        config = load_models_config()
+        oracles = config["oracle_models"]
+        assert oracles["gpt-oss-120b"]["provider"] == "together"
+        assert oracles["qwen3-235b"]["provider"] == "cerebras"
+

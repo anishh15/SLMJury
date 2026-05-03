@@ -40,14 +40,27 @@ PROMPT_SUMMEVAL = (
 )
 
 
-# --- MT-Bench Prompt (single score) ---
+# --- MT-Bench Prompts (2 turns) ---
 
-PROMPT_MTBENCH = (
+PROMPT_MTBENCH_TURN1 = (
     "Rate the quality of the following response on a scale of 1-5.\n"
     "1 = Very poor, 2 = Poor, 3 = Average, 4 = Good, 5 = Excellent.\n\n"
     "[Question]:\n{question}\n\n"
     "[Response]:\n{response}\n\n"
     "Consider helpfulness, accuracy, depth, creativity, and level of detail.\n"
+    "Provide your rating as: \\boxed{{SCORE}}"
+)
+
+PROMPT_MTBENCH_TURN2 = (
+    "Rate the quality of the assistant's Turn 2 response on a scale of 1-5.\n"
+    "1 = Very poor, 2 = Poor, 3 = Average, 4 = Good, 5 = Excellent.\n\n"
+    "[Turn 1 Question]:\n{turn1_question}\n\n"
+    "[Turn 1 Response]:\n{turn1_response}\n\n"
+    "[Turn 2 Question]:\n{turn2_question}\n\n"
+    "[Turn 2 Response]:\n{turn2_response}\n\n"
+    "Consider how well the Turn 2 response addresses the follow-up, "
+    "maintains context from Turn 1, and demonstrates helpfulness, "
+    "accuracy, and depth.\n"
     "Provide your rating as: \\boxed{{SCORE}}"
 )
 
@@ -200,73 +213,116 @@ class ScoringJudge:
         max_tokens: int = 8192,
         system_prompt: Optional[str] = None,
     ) -> list[dict]:
-        """Score MT-Bench responses on a 1-5 scale.
+        """Score MT-Bench responses on a 1-5 scale (both turns).
+
+        Each question has 2 turns scored independently. Turn 2 includes
+        full conversation context in the prompt.
 
         Args:
-            mtbench_data: List of dicts with 'question' and 'response' keys.
+            mtbench_data: List of dicts with turn1/turn2 question/response.
             max_tokens: Generation limit.
             system_prompt: Optional system prompt (e.g., persona).
 
         Returns:
-            List of scored dicts with judge predicted score.
+            List of scored dicts with per-turn judge scores.
         """
         from vllm import SamplingParams
 
         logger.info(
-            "Scoring %d MT-Bench responses (max_tokens=%d)...",
+            "Scoring %d MT-Bench questions × 2 turns (max_tokens=%d)...",
             len(mtbench_data), max_tokens,
         )
 
         enable_thinking = self.enable_thinking and max_tokens >= 8192
 
-        messages_list = []
+        # --- Turn 1 ---
+        t1_messages = []
         for item in mtbench_data:
             msgs = []
             if system_prompt:
                 msgs.append({"role": "system", "content": system_prompt})
             msgs.append({
                 "role": "user",
-                "content": PROMPT_MTBENCH.format(
-                    question=item["question"],
-                    response=item["response"],
+                "content": PROMPT_MTBENCH_TURN1.format(
+                    question=item["turn1_question"],
+                    response=item["turn1_response"],
                 ),
             })
-            messages_list.append(msgs)
+            t1_messages.append(msgs)
 
-        prompts = self._apply_chat_template(messages_list, enable_thinking)
+        t1_prompts = self._apply_chat_template(t1_messages, enable_thinking)
         params = self._get_sampling_params(max_tokens, enable_thinking)
-        outputs = self.llm.generate(prompts, params)
+        t1_outputs = self.llm.generate(t1_prompts, params)
 
+        # --- Turn 2 ---
+        t2_messages = []
+        for item in mtbench_data:
+            msgs = []
+            if system_prompt:
+                msgs.append({"role": "system", "content": system_prompt})
+            msgs.append({
+                "role": "user",
+                "content": PROMPT_MTBENCH_TURN2.format(
+                    turn1_question=item["turn1_question"],
+                    turn1_response=item["turn1_response"],
+                    turn2_question=item["turn2_question"],
+                    turn2_response=item["turn2_response"],
+                ),
+            })
+            t2_messages.append(msgs)
+
+        t2_prompts = self._apply_chat_template(t2_messages, enable_thinking)
+        t2_outputs = self.llm.generate(t2_prompts, params)
+
+        # --- Parse results ---
         results = []
-        parse_failures = 0
+        t1_failures = 0
+        t2_failures = 0
 
-        for i, (item, output) in enumerate(zip(mtbench_data, outputs)):
-            response = output.outputs[0].text.strip()
-            response = self._strip_thinking(response, enable_thinking)
+        for i, (item, t1_out, t2_out) in enumerate(
+            zip(mtbench_data, t1_outputs, t2_outputs),
+        ):
+            t1_resp = self._strip_thinking(
+                t1_out.outputs[0].text.strip(), enable_thinking,
+            )
+            t2_resp = self._strip_thinking(
+                t2_out.outputs[0].text.strip(), enable_thinking,
+            )
 
-            score = parse_score(response)
-            if score is None:
-                parse_failures += 1
+            t1_score = parse_score(t1_resp)
+            t2_score = parse_score(t2_resp)
+            if t1_score is None:
+                t1_failures += 1
+            if t2_score is None:
+                t2_failures += 1
 
             result = {
                 "problem_id": item["problem_id"],
-                "question": item["question"],
-                "response": item["response"],
-                "judge_response": response,
-                "judge_score": score,
+                "question_id": item["question_id"],
+                "category": item["category"],
+                "turn1_question": item["turn1_question"],
+                "turn1_response": item["turn1_response"],
+                "turn2_question": item["turn2_question"],
+                "turn2_response": item["turn2_response"],
+                "turn1_judge_response": t1_resp,
+                "turn1_judge_score": t1_score,
+                "turn2_judge_response": t2_resp,
+                "turn2_judge_score": t2_score,
             }
-            # Include oracle score if present
-            if "oracle_score" in item:
-                result["oracle_score"] = item["oracle_score"]
-            if "category" in item:
-                result["category"] = item["category"]
+            # Include oracle scores if present
+            if "turn1_oracle_score" in item:
+                result["turn1_oracle_score"] = item["turn1_oracle_score"]
+            if "turn2_oracle_score" in item:
+                result["turn2_oracle_score"] = item["turn2_oracle_score"]
 
             results.append(result)
 
+        n = len(mtbench_data) or 1
         logger.info(
-            "MT-Bench scoring complete. Parse failures: %d/%d (%.1f%%)",
-            parse_failures, len(mtbench_data),
-            100 * parse_failures / len(mtbench_data) if mtbench_data else 0,
+            "MT-Bench scoring complete. Parse failures: "
+            "Turn1=%d/%d (%.1f%%), Turn2=%d/%d (%.1f%%)",
+            t1_failures, len(mtbench_data), 100 * t1_failures / n,
+            t2_failures, len(mtbench_data), 100 * t2_failures / n,
         )
         return results
 

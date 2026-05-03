@@ -1,10 +1,12 @@
 """MT-Bench dataset loader.
 
 Downloads and caches MT-Bench from HuggingFace (philschmid/mt-bench).
-Uses only Turn 1 prompts (80 questions) across 8 categories.
+Each of the 80 questions has 2 turns — a main prompt and a follow-up
+that depends on the model's Turn 1 response.
 
-Requires a student model to generate responses and an oracle model to
-score them. The SLM judge then also scores them for comparison.
+Requires a student model to generate responses for both turns and
+oracle models to score them. The SLM judge then also scores them
+for comparison.
 """
 
 import json
@@ -21,13 +23,14 @@ DEFAULT_CACHE_FILE = DEFAULT_CACHE_DIR / "mtbench.json"
 def load_mtbench(cache_path: Optional[Path] = None) -> list[dict]:
     """Load MT-Bench dataset, downloading from HuggingFace if not cached.
 
-    Extracts Turn 1 prompts only (single-turn evaluation).
+    Extracts both Turn 1 and Turn 2 prompts for each question.
 
     Args:
         cache_path: Custom path to the cache JSON file.
 
     Returns:
-        List of dicts with keys: problem_id, question_id, category, question.
+        List of dicts with keys: problem_id, question_id, category,
+        turn1, turn2.
     """
     cache_file = cache_path or DEFAULT_CACHE_FILE
 
@@ -46,14 +49,16 @@ def load_mtbench(cache_path: Optional[Path] = None) -> list[dict]:
 
     problems = []
     for i, item in enumerate(dataset):
-        # MT-Bench has 2 turns; we only use Turn 1
-        turn1_question = item["turns"][0] if item["turns"] else ""
+        turns = item.get("turns", [])
+        turn1 = turns[0] if len(turns) > 0 else ""
+        turn2 = turns[1] if len(turns) > 1 else ""
 
         problems.append({
             "problem_id": i,
             "question_id": item.get("question_id", i),
             "category": item.get("category", "general"),
-            "question": turn1_question,
+            "turn1": turn1,
+            "turn2": turn2,
         })
 
     cache_file.parent.mkdir(parents=True, exist_ok=True)
@@ -61,6 +66,7 @@ def load_mtbench(cache_path: Optional[Path] = None) -> list[dict]:
         json.dump(problems, f, indent=4)
 
     logger.info(
-        "Cached %d MT-Bench Turn-1 prompts to %s", len(problems), cache_file,
+        "Cached %d MT-Bench questions (2 turns each) to %s",
+        len(problems), cache_file,
     )
     return problems
