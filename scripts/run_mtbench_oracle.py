@@ -30,29 +30,18 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Oracle scoring prompt for Turn 1 (same scale as SLM judges)
-ORACLE_PROMPT_TURN1 = (
-    "You are an expert evaluator. Rate the quality of the following response "
-    "on a scale of 1-5.\n"
-    "1 = Very poor, 2 = Poor, 3 = Average, 4 = Good, 5 = Excellent.\n\n"
-    "[Question]:\n{question}\n\n"
-    "[Response]:\n{response}\n\n"
-    "Consider helpfulness, accuracy, depth, creativity, and level of detail.\n"
-    "Provide your rating as: \\boxed{{SCORE}}"
-)
-
-# Oracle scoring prompt for Turn 2 (includes full conversation context)
-ORACLE_PROMPT_TURN2 = (
-    "You are an expert evaluator. Rate the quality of the assistant's "
-    "Turn 2 response on a scale of 1-5.\n"
+# Oracle scoring prompt — identical to PROMPT_MTBENCH in scoring_judge.py
+# to ensure fair SLM-LLM correlation measurement.
+PROMPT_MTBENCH = (
+    "Rate the overall quality of the assistant's responses in the following "
+    "2-turn conversation on a scale of 1-5.\n"
     "1 = Very poor, 2 = Poor, 3 = Average, 4 = Good, 5 = Excellent.\n\n"
     "[Turn 1 Question]:\n{turn1_question}\n\n"
     "[Turn 1 Response]:\n{turn1_response}\n\n"
     "[Turn 2 Question]:\n{turn2_question}\n\n"
     "[Turn 2 Response]:\n{turn2_response}\n\n"
-    "Consider how well the Turn 2 response addresses the follow-up, "
-    "maintains context from Turn 1, and demonstrates helpfulness, "
-    "accuracy, and depth.\n"
+    "Consider helpfulness, accuracy, depth, creativity, and how well "
+    "the assistant maintains context across both turns.\n"
     "Provide your rating as: \\boxed{{SCORE}}"
 )
 
@@ -152,36 +141,25 @@ def score_responses(
     provider = oracle_cfg.get("provider", "unknown")
 
     logger.info(
-        "Scoring %d responses from %s using %s (%s via %s)",
+        "Scoring %d conversations from %s using %s (%s via %s)",
         len(responses), student_model, oracle_key, model_id, provider,
     )
 
     client = _create_api_client(oracle_cfg)
 
     results = []
-    parse_failures_t1 = 0
-    parse_failures_t2 = 0
+    parse_failures = 0
 
     for i, r in enumerate(responses):
-        # --- Score Turn 1 ---
-        t1_prompt = ORACLE_PROMPT_TURN1.format(
-            question=r["turn1_question"],
-            response=r["turn1_response"],
-        )
-        t1_score, t1_response = _score_single(client, model_id, t1_prompt)
-        if t1_score is None:
-            parse_failures_t1 += 1
-
-        # --- Score Turn 2 ---
-        t2_prompt = ORACLE_PROMPT_TURN2.format(
+        prompt = PROMPT_MTBENCH.format(
             turn1_question=r["turn1_question"],
             turn1_response=r["turn1_response"],
             turn2_question=r["turn2_question"],
             turn2_response=r["turn2_response"],
         )
-        t2_score, t2_response = _score_single(client, model_id, t2_prompt)
-        if t2_score is None:
-            parse_failures_t2 += 1
+        score, oracle_response = _score_single(client, model_id, prompt)
+        if score is None:
+            parse_failures += 1
 
         results.append({
             "problem_id": r["problem_id"],
@@ -193,19 +171,16 @@ def score_responses(
             "turn2_response": r["turn2_response"],
             "student_model": r["student_model"],
             "oracle_model": oracle_key,
-            "turn1_oracle_response": t1_response,
-            "turn1_oracle_score": t1_score,
-            "turn2_oracle_response": t2_response,
-            "turn2_oracle_score": t2_score,
+            "oracle_response": oracle_response,
+            "oracle_score": score,
         })
 
         if (i + 1) % 10 == 0:
-            logger.info("  Scored %d/%d questions", i + 1, len(responses))
+            logger.info("  Scored %d/%d conversations", i + 1, len(responses))
 
     logger.info(
-        "Oracle scoring complete. Parse failures: Turn1=%d/%d, Turn2=%d/%d",
-        parse_failures_t1, len(responses),
-        parse_failures_t2, len(responses),
+        "Oracle scoring complete. Parse failures: %d/%d",
+        parse_failures, len(responses),
     )
 
     # Save

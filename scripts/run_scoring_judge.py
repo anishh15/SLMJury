@@ -157,8 +157,7 @@ def main():
             item["turn1_response"] = oracle["turn1_response"]
             item["turn2_question"] = item["turn2"]
             item["turn2_response"] = oracle["turn2_response"]
-            item["turn1_oracle_score"] = oracle["turn1_oracle_score"]
-            item["turn2_oracle_score"] = oracle["turn2_oracle_score"]
+            item["oracle_score"] = oracle["oracle_score"]
             item["question_id"] = item.get("question_id", item["problem_id"])
 
         results = judge.score_mtbench(data, max_tokens=args.max_tokens)
@@ -173,14 +172,6 @@ def main():
             overall.get("pearson"), overall.get("spearman"),
             overall.get("cohens_kappa"),
         )
-        for turn_name, turn_metrics in eval_result.get("per_turn", {}).items():
-            logger.info(
-                "  %s — r=%s, ρ=%s, κ=%s",
-                turn_name,
-                turn_metrics.get("pearson"),
-                turn_metrics.get("spearman"),
-                turn_metrics.get("cohens_kappa"),
-            )
 
     judge.cleanup()
     logger.info("Scoring evaluation complete for %s × %s", args.judge, args.dataset)

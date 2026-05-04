@@ -223,34 +223,23 @@ def evaluate_summeval(results: list[dict], threshold: int = DEFAULT_BINARY_THRES
 
 
 def evaluate_mtbench(results: list[dict], threshold: int = DEFAULT_BINARY_THRESHOLD) -> dict:
-    """Evaluate MT-Bench scoring results (2-turn).
+    """Evaluate MT-Bench scoring results.
 
-    Computes per-turn metrics, overall average, and per-category breakdown.
+    Each question has a single holistic score covering both turns.
 
     Args:
         results: List of scored dicts from ScoringJudge.score_mtbench().
         threshold: Binary classification threshold.
 
     Returns:
-        Dict with per_turn, overall, and per_category metrics.
+        Dict with overall metrics and per-category breakdown.
     """
-    # Per-turn metrics
-    t1_judge = [r["turn1_judge_score"] for r in results]
-    t1_oracle = [r["turn1_oracle_score"] for r in results]
-    t2_judge = [r["turn2_judge_score"] for r in results]
-    t2_oracle = [r["turn2_oracle_score"] for r in results]
+    judge_scores = [r["judge_score"] for r in results]
+    ground_truth = [r["oracle_score"] for r in results]
 
-    per_turn = {
-        "turn1": evaluate_scores(t1_judge, t1_oracle, threshold),
-        "turn2": evaluate_scores(t2_judge, t2_oracle, threshold),
-    }
+    overall = evaluate_scores(judge_scores, ground_truth, threshold)
 
-    # Overall: average across both turns
-    all_judge = t1_judge + t2_judge
-    all_oracle = t1_oracle + t2_oracle
-    overall = evaluate_scores(all_judge, all_oracle, threshold)
-
-    # Per-category breakdown (both turns combined)
+    # Per-category breakdown
     categories: dict[str, list] = {}
     for r in results:
         cat = r.get("category", "general")
@@ -258,17 +247,11 @@ def evaluate_mtbench(results: list[dict], threshold: int = DEFAULT_BINARY_THRESH
 
     per_category = {}
     for cat, cat_results in sorted(categories.items()):
-        cat_judge = (
-            [r["turn1_judge_score"] for r in cat_results]
-            + [r["turn2_judge_score"] for r in cat_results]
-        )
-        cat_oracle = (
-            [r["turn1_oracle_score"] for r in cat_results]
-            + [r["turn2_oracle_score"] for r in cat_results]
-        )
+        cat_judge = [r["judge_score"] for r in cat_results]
+        cat_oracle = [r["oracle_score"] for r in cat_results]
         per_category[cat] = evaluate_scores(cat_judge, cat_oracle, threshold)
 
-    return {"per_turn": per_turn, "overall": overall, "per_category": per_category}
+    return {"overall": overall, "per_category": per_category}
 
 
 def save_evaluation(
