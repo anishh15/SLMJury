@@ -13,18 +13,18 @@ student_models:
     gpu_memory_utilization: 0.85
     max_model_len: 32768
 
-# Oracle models for MT-Bench scoring (API-based)
+# Oracle models for MT-Bench scoring (local vLLM)
 oracle_models:
   gpt-oss-120b:
     model: "openai/gpt-oss-120b"
-    provider: "together"
-    base_url: "https://api.together.ai/v1"
-    api_key_env: "TOGETHER_API_KEY"
+    tensor_parallel_size: 4
+    gpu_memory_utilization: 0.9
+    max_num_seqs: 16
   qwen3-235b:
-    model: "qwen-3-235b-a22b-instruct-2507"
-    provider: "cerebras"
-    base_url: "https://api.cerebras.ai/v1"
-    api_key_env: "CEREBRAS_API_KEY"
+    model: "Qwen/Qwen3-235B-A22B-Instruct"
+    tensor_parallel_size: 4
+    gpu_memory_utilization: 0.9
+    max_num_seqs: 16
 
 judge_models:
   # Qwen 2.5 family

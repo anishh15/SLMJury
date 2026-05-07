@@ -1,32 +1,24 @@
-"""CLI entry-point: score MT-Bench student responses using oracle models via API.
+"""CLI entry-point: score MT-Bench student responses using oracle models via vLLM.
 
-Uses OpenAI-compatible APIs:
-  - GPT-OSS-120B via Together AI (https://api.together.ai/v1)
-  - Qwen3-235B via Cerebras (https://api.cerebras.ai/v1)
-
-Scores both turns separately — Turn 2 includes full conversation context.
+Loads oracle models locally and scores full 2-turn conversations holistically.
+Uses the same prompt as the SLM judges for fair correlation measurement.
 
 Usage:
-    python scripts/run_mtbench_oracle.py --student-responses results/mtbench_responses/llama3.1-8b.json
-    python scripts/run_mtbench_oracle.py --student-responses results/mtbench_responses/ --oracle gpt-oss-120b
-    python scripts/run_mtbench_oracle.py --student-responses results/mtbench_responses/ --oracle all
+    python scripts/run_mtbench_oracle.py --oracle gpt-oss-120b \
+        --student-responses results/mtbench_responses/llama3.1-8b.json
+    python scripts/run_mtbench_oracle.py --oracle qwen3-235b \
+        --student-responses results/mtbench_responses/ --tp 4 --gpu-mem 0.9
 """
 
 import argparse
+import gc
 import json
 import logging
-import os
-import time
 from pathlib import Path
-from typing import Optional
-
-from dotenv import load_dotenv
 
 from slmjury.configs import load_models_config
 from slmjury.parsers.score import parse_score
 
-# Load API keys from .env file (project root)
-load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -46,118 +38,97 @@ PROMPT_MTBENCH = (
 )
 
 
-def _create_api_client(oracle_cfg: dict):
-    """Create an OpenAI-compatible API client for the oracle model.
-
-    Args:
-        oracle_cfg: Oracle config dict from models.yaml.
-
-    Returns:
-        Configured OpenAI client.
-
-    Raises:
-        ValueError: If the required API key environment variable is not set.
-    """
-    from openai import OpenAI
-
-    api_key_env = oracle_cfg["api_key_env"]
-    api_key = os.environ.get(api_key_env)
-    if not api_key:
-        raise ValueError(
-            f"API key not set. Please set the '{api_key_env}' "
-            f"environment variable.\n"
-            f"  export {api_key_env}='your-api-key'"
-        )
-
-    return OpenAI(
-        api_key=api_key,
-        base_url=oracle_cfg["base_url"],
-    )
-
-
-def _score_single(
-    client,
-    model: str,
-    prompt: str,
-    max_retries: int = 3,
-) -> tuple[Optional[int], str]:
-    """Score a single prompt via API with retry logic.
-
-    Args:
-        client: OpenAI-compatible API client.
-        model: Model ID string.
-        prompt: Formatted scoring prompt.
-        max_retries: Number of retry attempts on failure.
-
-    Returns:
-        Tuple of (score, raw_response_text).
-    """
-    for attempt in range(max_retries):
-        try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0,
-                max_tokens=4096,
-            )
-            text = response.choices[0].message.content.strip()
-            score = parse_score(text)
-            return score, text
-        except Exception as e:
-            if attempt < max_retries - 1:
-                wait = 2 ** attempt
-                logger.warning(
-                    "API error (attempt %d/%d): %s. Retrying in %ds...",
-                    attempt + 1, max_retries, e, wait,
-                )
-                time.sleep(wait)
-            else:
-                logger.error("API error after %d attempts: %s", max_retries, e)
-                return None, f"API_ERROR: {e}"
-
-
 def score_responses(
     responses_file: Path,
     oracle_key: str,
     oracle_cfg: dict,
     output_dir: Path,
+    tp_override: int | None = None,
+    gpu_mem_override: float | None = None,
 ) -> Path:
-    """Score all responses in a single file using the oracle model via API.
+    """Score all responses in a file using an oracle model via vLLM.
 
     Args:
         responses_file: Path to student response JSON file.
         oracle_key: Oracle model key (e.g., 'gpt-oss-120b').
         oracle_cfg: Oracle config dict from models.yaml.
         output_dir: Directory for saving oracle scores.
+        tp_override: Override tensor_parallel_size.
+        gpu_mem_override: Override gpu_memory_utilization.
 
     Returns:
         Path to the saved oracle scores file.
     """
+    from vllm import LLM, SamplingParams
+    from transformers import AutoTokenizer
+
     with open(responses_file) as f:
         responses = json.load(f)
 
     student_model = responses[0]["student_model"] if responses else "unknown"
-    model_id = oracle_cfg["model"]
-    provider = oracle_cfg.get("provider", "unknown")
+    cfg = dict(oracle_cfg)
+
+    # Apply CLI overrides
+    if tp_override is not None:
+        cfg["tensor_parallel_size"] = tp_override
+    if gpu_mem_override is not None:
+        cfg["gpu_memory_utilization"] = gpu_mem_override
+
+    model_id = cfg["model"]
 
     logger.info(
-        "Scoring %d conversations from %s using %s (%s via %s)",
-        len(responses), student_model, oracle_key, model_id, provider,
+        "Scoring %d conversations from %s using oracle %s (%s)",
+        len(responses), student_model, oracle_key, model_id,
     )
 
-    client = _create_api_client(oracle_cfg)
+    # Load tokenizer + model
+    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
 
-    results = []
-    parse_failures = 0
+    vllm_kwargs = {
+        "model": model_id,
+        "tensor_parallel_size": cfg.get("tensor_parallel_size", 4),
+        "gpu_memory_utilization": cfg.get("gpu_memory_utilization", 0.9),
+        "trust_remote_code": True,
+        "enforce_eager": True,
+        "dtype": cfg.get("dtype", "float16"),
+    }
+    if cfg.get("max_model_len"):
+        vllm_kwargs["max_model_len"] = cfg["max_model_len"]
+    if cfg.get("quantization"):
+        vllm_kwargs["quantization"] = cfg["quantization"]
+    if cfg.get("max_num_seqs"):
+        vllm_kwargs["max_num_seqs"] = cfg["max_num_seqs"]
 
-    for i, r in enumerate(responses):
-        prompt = PROMPT_MTBENCH.format(
+    llm = LLM(**vllm_kwargs)
+    params = SamplingParams(temperature=0, max_tokens=4096)
+
+    # Build prompts
+    prompts = []
+    for r in responses:
+        user_content = PROMPT_MTBENCH.format(
             turn1_question=r["turn1_question"],
             turn1_response=r["turn1_response"],
             turn2_question=r["turn2_question"],
             turn2_response=r["turn2_response"],
         )
-        score, oracle_response = _score_single(client, model_id, prompt)
+        chat_prompt = tokenizer.apply_chat_template(
+            [{"role": "user", "content": user_content}],
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+        prompts.append(chat_prompt)
+
+    # Batch generate
+    logger.info("Running batch inference on %d prompts...", len(prompts))
+    outputs = llm.generate(prompts, params)
+
+    # Parse results
+    results = []
+    parse_failures = 0
+
+    for r, output in zip(responses, outputs):
+        response_text = output.outputs[0].text.strip()
+        score = parse_score(response_text)
         if score is None:
             parse_failures += 1
 
@@ -171,17 +142,23 @@ def score_responses(
             "turn2_response": r["turn2_response"],
             "student_model": r["student_model"],
             "oracle_model": oracle_key,
-            "oracle_response": oracle_response,
+            "oracle_response": response_text,
             "oracle_score": score,
         })
-
-        if (i + 1) % 10 == 0:
-            logger.info("  Scored %d/%d conversations", i + 1, len(responses))
 
     logger.info(
         "Oracle scoring complete. Parse failures: %d/%d",
         parse_failures, len(responses),
     )
+
+    # Cleanup GPU memory before next run
+    del llm, tokenizer
+    gc.collect()
+    try:
+        import torch
+        torch.cuda.empty_cache()
+    except Exception:
+        pass
 
     # Save
     out_dir = output_dir / oracle_key
@@ -196,22 +173,32 @@ def score_responses(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Score MT-Bench student responses using oracle models via API.",
+        description="Score MT-Bench student responses using oracle models via vLLM.",
     )
     parser.add_argument(
         "--student-responses", required=True,
         help="Path to student response JSON file or directory of files",
     )
     parser.add_argument(
-        "--oracle", default="all",
+        "--oracle", required=True,
         help=(
-            "Oracle model key from models.yaml, or 'all' to run both. "
-            "Available: gpt-oss-120b, qwen3-235b (default: all)"
+            "Oracle model key from models.yaml. "
+            "Available: gpt-oss-120b, qwen3-235b"
         ),
     )
     parser.add_argument(
         "--output-dir", default="results/mtbench_oracle",
         help="Directory for saving oracle scores",
+    )
+
+    # Hardware overrides
+    parser.add_argument(
+        "--tensor-parallel-size", "--tp", type=int, default=None,
+        help="Override tensor_parallel_size from models.yaml",
+    )
+    parser.add_argument(
+        "--gpu-memory-utilization", "--gpu-mem", type=float, default=None,
+        help="Override gpu_memory_utilization from models.yaml",
     )
     args = parser.parse_args()
 
@@ -224,16 +211,13 @@ def main():
     config = load_models_config()
     oracles = config.get("oracle_models", {})
 
-    if args.oracle.lower() == "all":
-        oracle_keys = list(oracles.keys())
-    else:
-        if args.oracle not in oracles:
-            raise ValueError(
-                f"Unknown oracle model: {args.oracle}. "
-                f"Available: {list(oracles.keys())}"
-            )
-        oracle_keys = [args.oracle]
+    if args.oracle not in oracles:
+        raise ValueError(
+            f"Unknown oracle model: {args.oracle}. "
+            f"Available: {list(oracles.keys())}"
+        )
 
+    oracle_cfg = oracles[args.oracle]
     responses_path = Path(args.student_responses)
     output_dir = Path(args.output_dir)
 
@@ -245,15 +229,17 @@ def main():
     else:
         raise FileNotFoundError(f"Not found: {responses_path}")
 
-    for oracle_key in oracle_keys:
-        oracle_cfg = oracles[oracle_key]
-        logger.info(
-            "Oracle: %s (%s via %s)",
-            oracle_key, oracle_cfg["model"], oracle_cfg.get("provider"),
-        )
+    logger.info(
+        "Oracle: %s (%s) — scoring %d student file(s)",
+        args.oracle, oracle_cfg["model"], len(response_files),
+    )
 
-        for f in response_files:
-            score_responses(f, oracle_key, oracle_cfg, output_dir)
+    for f in response_files:
+        score_responses(
+            f, args.oracle, oracle_cfg, output_dir,
+            tp_override=args.tensor_parallel_size,
+            gpu_mem_override=args.gpu_memory_utilization,
+        )
 
     logger.info("All oracle scoring complete.")
 

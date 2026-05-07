@@ -60,9 +60,6 @@ website/node_modules/
 website/dist/
 website/.env
 
-# Environment variables (API keys)
-.env
-
 # HuggingFace model download lock files
 *.lock
 

@@ -70,17 +70,17 @@ class TestLoadModelsConfig:
         assert "oracle_models" in config
         assert len(config["oracle_models"]) == 2
 
-    def test_oracle_models_are_api_based(self):
+    def test_oracle_models_are_vllm_based(self):
         config = load_models_config()
         for key, oracle in config["oracle_models"].items():
             assert "model" in oracle, f"{key} missing 'model' field"
-            assert "provider" in oracle, f"{key} missing 'provider' field"
-            assert "base_url" in oracle, f"{key} missing 'base_url' field"
-            assert "api_key_env" in oracle, f"{key} missing 'api_key_env' field"
+            assert "tensor_parallel_size" in oracle, f"{key} missing 'tensor_parallel_size'"
+            assert "gpu_memory_utilization" in oracle, f"{key} missing 'gpu_memory_utilization'"
 
-    def test_oracle_providers(self):
+    def test_oracle_model_ids(self):
         config = load_models_config()
         oracles = config["oracle_models"]
-        assert oracles["gpt-oss-120b"]["provider"] == "together"
-        assert oracles["qwen3-235b"]["provider"] == "cerebras"
+        assert oracles["gpt-oss-120b"]["model"] == "openai/gpt-oss-120b"
+        assert "Qwen3-235B" in oracles["qwen3-235b"]["model"]
+
 
