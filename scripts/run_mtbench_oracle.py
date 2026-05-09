@@ -6,7 +6,7 @@ Uses the same prompt as the SLM judges for fair correlation measurement.
 Usage:
     python scripts/run_mtbench_oracle.py --oracle gpt-oss-120b \
         --student-responses results/mtbench_responses/llama3.1-8b.json
-    python scripts/run_mtbench_oracle.py --oracle qwen3-235b \
+    python scripts/run_mtbench_oracle.py --oracle qwen3.5-397b \
         --student-responses results/mtbench_responses/ --tp 4 --gpu-mem 0.9
 """
 
@@ -183,7 +183,7 @@ def main():
         "--oracle", required=True,
         help=(
             "Oracle model key from models.yaml. "
-            "Available: gpt-oss-120b, qwen3-235b"
+            "Available: gpt-oss-120b, qwen3.5-397b"
         ),
     )
     parser.add_argument(

@@ -81,6 +81,6 @@ class TestLoadModelsConfig:
         config = load_models_config()
         oracles = config["oracle_models"]
         assert oracles["gpt-oss-120b"]["model"] == "openai/gpt-oss-120b"
-        assert "Qwen3-235B" in oracles["qwen3-235b"]["model"]
+        assert "Qwen3.5-397B" in oracles["qwen3.5-397b"]["model"]
 
 

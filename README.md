@@ -245,7 +245,7 @@ persona_results = run_all_personas("qwen3-4b", results, "qwen2.5-32b", "gsm8k", 
 | Dataset | Type | Turns | Size | Oracle |
 |---------|------|-------|------|--------|
 | **SummEval** | Summarization | — | 1,600 pairs | Human annotations |
-| **MT-Bench** | Multi-turn chat | 2 | 80 questions | GPT-OSS-120B (Together API), Qwen3-235B (Cerebras API) |
+| **MT-Bench** | Multi-turn chat | 2 | 80 questions | GPT-OSS-120B, Qwen3.5-397B (vLLM) |
 
 ---
 
