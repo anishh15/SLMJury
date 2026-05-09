@@ -1,13 +1,16 @@
 """CLI entry-point: run scoring evaluation for open-ended datasets.
 
 Scores SummEval or MT-Bench using a single judge model (one model per process).
+For MT-Bench, the model loads once and scores all oracle files automatically.
 
 Usage:
     python scripts/run_scoring_judge.py --judge qwen3-4b --dataset summeval
-    python scripts/run_scoring_judge.py --judge qwen3-4b --dataset mtbench
+    python scripts/run_scoring_judge.py --judge qwen3-4b --dataset mtbench \
+        --oracle-scores results/mtbench_oracle/
 
-    # Run all scoring judges — use the bash wrapper:
-    #   bash bash/run_scoring_judges.sh
+    # Run all scoring judges — use the bash wrappers:
+    #   bash bash/run_scoring_judges.sh      # SummEval
+    #   bash bash/run_mtbench_judges.sh      # MT-Bench
 """
 
 import argparse
@@ -15,7 +18,6 @@ import json
 import logging
 from pathlib import Path
 
-from slmjury.configs import load_models_config
 from slmjury.core.scoring_judge import ScoringJudge
 from slmjury.core.scoring_evaluator import (
     evaluate_summeval,
@@ -54,10 +56,13 @@ def main():
         help="Re-score even if result files already exist",
     )
 
-    # For MT-Bench: path to pre-computed oracle scores
+    # For MT-Bench: path to pre-computed oracle scores (file or directory)
     parser.add_argument(
         "--oracle-scores", default=None,
-        help="Path to JSON file with oracle scores for MT-Bench",
+        help=(
+            "Path to oracle scores for MT-Bench (file or directory). "
+            "e.g., results/mtbench_oracle/"
+        ),
     )
 
     # Hardware overrides
@@ -84,14 +89,15 @@ def main():
     output_dir = Path(args.output_dir)
     eval_dir = Path(args.eval_dir)
 
-    # Check skip logic
-    out_file = output_dir / args.judge / f"{args.dataset}.json"
-    if out_file.exists() and not args.force:
-        logger.info(
-            "SKIP %s × %s — already scored (use --force to re-score)",
-            args.judge, args.dataset,
-        )
-        return
+    # Skip logic (summeval only — mtbench handles per-file skipping below)
+    if args.dataset == "summeval":
+        skip_file = output_dir / args.judge / "summeval.json"
+        if skip_file.exists() and not args.force:
+            logger.info(
+                "SKIP %s × summeval — already scored (use --force)",
+                args.judge,
+            )
+            return
 
     # Build model_config override
     model_config = {}
@@ -136,46 +142,80 @@ def main():
             )
 
     elif args.dataset == "mtbench":
-        data = load_dataset("mtbench")
-        logger.info("Loaded %d MT-Bench questions", len(data))
-
         # MT-Bench requires student responses + oracle scores
         if not args.oracle_scores:
             logger.error(
-                "MT-Bench requires --oracle-scores with pre-generated "
-                "student responses and oracle scores."
+                "MT-Bench requires --oracle-scores (file or directory)."
             )
             judge.cleanup()
             return
 
-        with open(args.oracle_scores) as f:
-            oracle_data = json.load(f)
+        # Collect oracle files (file or directory)
+        oracle_path = Path(args.oracle_scores)
+        if oracle_path.is_file():
+            oracle_files = [oracle_path]
+        elif oracle_path.is_dir():
+            oracle_files = sorted(oracle_path.rglob("*.json"))
+        else:
+            logger.error("Not found: %s", oracle_path)
+            judge.cleanup()
+            return
 
-        # Merge oracle data into MT-Bench prompts
-        for item, oracle in zip(data, oracle_data):
-            item["turn1_question"] = item["turn1"]
-            item["turn1_response"] = oracle["turn1_response"]
-            item["turn2_question"] = item["turn2"]
-            item["turn2_response"] = oracle["turn2_response"]
-            item["oracle_score"] = oracle["oracle_score"]
-            item["question_id"] = item.get("question_id", item["problem_id"])
+        if not oracle_files:
+            logger.error("No oracle JSON files found in %s", oracle_path)
+            judge.cleanup()
+            return
 
-        results = judge.score_mtbench(data, max_tokens=args.max_tokens)
-        judge.save_results(results, "mtbench")
-
-        eval_result = evaluate_mtbench(results)
-        save_evaluation(eval_result, args.judge, "mtbench", eval_dir)
-
-        overall = eval_result["overall"]
         logger.info(
-            "MT-Bench overall — Pearson: %s, Spearman: %s, κ: %s",
-            overall.get("pearson"), overall.get("spearman"),
-            overall.get("cohens_kappa"),
+            "Scoring %d oracle file(s) with judge %s",
+            len(oracle_files), args.judge,
         )
 
+        # Load MT-Bench prompts once
+        base_data = load_dataset("mtbench")
+
+        # Score each oracle file with the same loaded model
+        for ofile in oracle_files:
+            # Derive suffix: gpt-oss-120b/llama3.1-8b.json → gpt-oss-120b_llama3.1-8b
+            suffix = f"{ofile.parent.name}_{ofile.stem}"
+
+            # Skip if already scored
+            out_file = output_dir / args.judge / f"mtbench_{suffix}.json"
+            if out_file.exists() and not args.force:
+                logger.info("SKIP %s — already scored", out_file.name)
+                continue
+
+            with open(ofile) as f:
+                oracle_data = json.load(f)
+
+            # Merge oracle data into a fresh copy of MT-Bench prompts
+            data = [dict(item) for item in base_data]
+            for item, oracle in zip(data, oracle_data):
+                item["turn1_question"] = item["turn1"]
+                item["turn1_response"] = oracle["turn1_response"]
+                item["turn2_question"] = item["turn2"]
+                item["turn2_response"] = oracle["turn2_response"]
+                item["oracle_score"] = oracle["oracle_score"]
+                item["question_id"] = item.get("question_id", item["problem_id"])
+
+            results = judge.score_mtbench(data, max_tokens=args.max_tokens)
+            judge.save_results(results, "mtbench", suffix=suffix)
+
+            eval_result = evaluate_mtbench(results)
+            save_evaluation(eval_result, args.judge, "mtbench", eval_dir, suffix=suffix)
+
+            overall = eval_result["overall"]
+            logger.info(
+                "MT-Bench [%s] — Pearson: %s, Spearman: %s, κ: %s",
+                suffix,
+                overall.get("pearson"), overall.get("spearman"),
+                overall.get("cohens_kappa"),
+            )
+
     judge.cleanup()
-    logger.info("Scoring evaluation complete for %s × %s", args.judge, args.dataset)
+    logger.info("Scoring complete for %s × %s", args.judge, args.dataset)
 
 
 if __name__ == "__main__":
     main()
+
