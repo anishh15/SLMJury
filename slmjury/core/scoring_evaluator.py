@@ -216,7 +216,6 @@ def evaluate_summeval(results: list[dict], threshold: int = DEFAULT_BINARY_THRES
         overall[metric] = _safe_round(sum(values) / len(values)) if values else None
 
     overall["n_valid"] = min(per_dim[dim]["n_valid"] for dim in SUMMEVAL_DIMENSIONS)
-    overall["n_total"] = results[0]["problem_id"] + 1 if results else 0
     overall["n_total"] = len(results)
 
     return {"per_dimension": per_dim, "overall": overall}

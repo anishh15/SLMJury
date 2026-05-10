@@ -15,6 +15,13 @@ export default function Footer() {
       {/* Decorative gradient line at top */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-bb-accent/40 to-transparent" />
 
+      {/* Bottom accent line */}
+      <div className={`absolute bottom-0 left-0 right-0 h-px ${
+        isDark
+          ? 'bg-gradient-to-r from-transparent via-bb-purple/20 to-transparent'
+          : 'bg-gradient-to-r from-transparent via-bb-accent-dark/10 to-transparent'
+      }`} />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           {/* Brand */}
@@ -64,9 +71,9 @@ export default function Footer() {
               }`}>Contact</h4>
             <ul className="space-y-3 text-sm">
               <li>
-                <a href="mailto:23ucs535@lnmiit.ac.in" className={linkClass}>
+                <a href="mailto:anshladdha15@gmail.com" className={linkClass}>
                   <Mail className="w-3.5 h-3.5" />
-                  23ucs535@lnmiit.ac.in
+                  anshladdha15@gmail.com
                 </a>
               </li>
               <li>

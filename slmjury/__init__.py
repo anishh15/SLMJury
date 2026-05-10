@@ -1,4 +1,4 @@
-"""SLMJury: Can Small Language Models Judge Reasoning as Well as Large Ones?
+"""SLMJury: Can Small Language Models Judge as Well as Large Language Models?
 
 A framework for evaluating Small Language Models (0.6B-14B) as judges
 of reasoning quality, with support for majority voting ensembles,
@@ -6,7 +6,7 @@ multi-agent debate, and persona effects.
 
 Key Features:
 - 16 SLM judges across Qwen, Llama, and Phi-4 model families
-- 10 datasets (GSM8K, GSM-Plus, MATH, ARC, HellaSwag, WinoGrande, TruthfulQA, SummEval, MT-Bench)
+- 10 datasets (GSM8K, GSM-Plus, MATH, ARC-Easy, ARC-Challenge, HellaSwag, WinoGrande, TruthfulQA, SummEval, MT-Bench)
 - Closed-ended (verdict) and open-ended (scoring) evaluation pipelines
 - Majority voting ensembles from top-5 judges
 - Multi-agent debate with RCR prompting

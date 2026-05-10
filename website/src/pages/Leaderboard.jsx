@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from 'react'
-import { Trophy, Search, ChevronDown, ChevronUp, Filter, Brain, Target, Crown, Medal, Star, ArrowUpRight, Users, Database, Layers, UserCheck, Scale, MessageSquare, FlaskConical } from 'lucide-react'
-import { modelData, majorityVotingData, personaData, madData, PERSONAS, projectInfo } from '../data/modelData'
+import React, { useState, useMemo, useEffect } from 'react'
+import { Trophy, Search, ChevronDown, ChevronUp, Filter, Brain, Target, Crown, Medal, Star, ArrowUpRight, Users, Database, Layers, UserCheck, Scale, MessageSquare, FlaskConical, BookOpenText, BarChart3, Check, Copy } from 'lucide-react'
+import { modelData, majorityVotingData, personaData, madData, PERSONAS, projectInfo, summevalData, mtbenchData, SUMMEVAL_DIMS, MTBENCH_CATEGORIES } from '../data/modelData'
 import { useTheme } from '../context/ThemeContext'
 
 /* ─── Animations ────────────────────────────────────────────────── */
@@ -13,6 +13,41 @@ function AnimateIn({ children, delay = 0, className = '', direction = 'up' }) {
     <div className={`transition-all duration-700 ease-out ${show ? 'opacity-100 translate-y-0 scale-100' : `opacity-0 ${transforms[direction] || transforms.up}`} ${className}`}>
       {children}
     </div>
+  )
+}
+
+function TypingEffect() {
+  const phrases = [
+    'Can Small Language Models Judge?',
+    '16 Judge Models, 0.6B–14B Parameters',
+    '10 Benchmarks, 4,100+ Experiments',
+    'Individual · Persona · Ensemble · Debate',
+    'Closed-Ended Accuracy + Open-Ended Correlation',
+  ]
+  const [phraseIdx, setPhraseIdx] = useState(0)
+  const [charIdx, setCharIdx] = useState(0)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  useEffect(() => {
+    const cur = phrases[phraseIdx]
+    let timeout
+    if (!isDeleting && charIdx < cur.length) {
+      timeout = setTimeout(() => setCharIdx(charIdx + 1), 45)
+    } else if (!isDeleting && charIdx === cur.length) {
+      timeout = setTimeout(() => setIsDeleting(true), 2200)
+    } else if (isDeleting && charIdx > 0) {
+      timeout = setTimeout(() => setCharIdx(charIdx - 1), 25)
+    } else if (isDeleting && charIdx === 0) {
+      setIsDeleting(false)
+      setPhraseIdx((phraseIdx + 1) % phrases.length)
+    }
+    return () => clearTimeout(timeout)
+  }, [charIdx, isDeleting, phraseIdx])
+
+  return (
+    <span className="typing-cursor font-mono text-bb-accent">
+      {phrases[phraseIdx].substring(0, charIdx)}
+    </span>
   )
 }
 
@@ -40,12 +75,29 @@ const DATASETS = [
   { key: 'truthfulqa_acc', label: 'TruthfulQA', short: 'TQA', color: 'text-sky-400' },
 ]
 
-const TABS = [
-  { id: 'phase1', label: 'Individual Judges', icon: Brain },
+const CLOSED_TABS = [
+  { id: 'individual', label: 'Individual Judges', icon: Brain },
   { id: 'majority', label: 'Majority Voting', icon: Users },
   { id: 'persona', label: 'Persona Effect', icon: UserCheck },
   { id: 'mad', label: 'Multi-Agent Debate', icon: MessageSquare },
 ]
+
+const OPEN_TABS = [
+  { id: 'summeval', label: 'SummEval', icon: BookOpenText },
+  { id: 'mtbench', label: 'MT-Bench', icon: BarChart3 },
+]
+
+/** SummEval dimension display labels */
+const DIM_LABELS = {
+  coherence: 'Coherence', consistency: 'Consistency',
+  fluency: 'Fluency', relevance: 'Relevance',
+}
+
+/** MT-Bench category display labels */
+const CAT_LABELS = {
+  coding: 'Coding', extraction: 'Extraction', humanities: 'Humanities', math: 'Math',
+  reasoning: 'Reasoning', roleplay: 'Roleplay', stem: 'STEM', writing: 'Writing',
+}
 
 /* ─── Helpers ───────────────────────────────────────────────────── */
 
@@ -54,19 +106,19 @@ const fmt = (v) => v != null ? v.toFixed(2) : '—'
 
 function getUniqueKey(m) { return `${m.shortName}_t${m.tokens}` }
 
-/** Build Phase 1 accuracy lookup: "shortName_tTokens" → accuracy */
-const phase1AccMap = (() => {
+/** Build individual accuracy lookup: "shortName_tTokens" → accuracy */
+const baseAccMap = (() => {
   const map = {}
   modelData.forEach(m => { map[`${m.shortName}_t${m.tokens}`] = m.accuracy })
   return map
 })()
 
 /**
- * For an ensemble entry, compute the best individual Phase 1 accuracy
+ * For an ensemble entry, compute the best individual accuracy
  * among the constituent judges — used as the comparison baseline.
  * MV judges have `tokens` → exact key_tTokens lookup.
  * MAD judges have `temperature` instead → all MAD runs are Reasoned
- * (max_tokens = 8192) so we compare against t=8192 Phase 1 accuracy.
+ * (max_tokens = 8192) so we compare against t=8192 accuracy.
  */
 function bestComboBase(m) {
   if (!m.judges || m.judges.length === 0) return null
@@ -75,13 +127,13 @@ function bestComboBase(m) {
   for (const j of m.judges) {
     if (j.tokens != null) {
       // MV: exact token-setting lookup
-      const acc = phase1AccMap[`${j.key}_t${j.tokens}`]
+      const acc = baseAccMap[`${j.key}_t${j.tokens}`]
       if (acc != null && acc > best) best = acc
     } else {
       // MAD: all agents are Reasoned (t=8192), compare with t=8192 only
       if (!seen.has(j.key)) {
         seen.add(j.key)
-        const acc = phase1AccMap[`${j.key}_t8192`]
+        const acc = baseAccMap[`${j.key}_t8192`]
         if (acc != null && acc > best) best = acc
       }
     }
@@ -279,8 +331,8 @@ function EnsembleTable({ data, description }) {
               const isExpanded = expandedRow === m.ensemble_name
               const base = bestComboBase(m)
               return (
-                <>
-                  <tr key={m.ensemble_name} className={`border-b cursor-pointer transition-all duration-150 ${isDark ? `border-bb-dark-50/10 ${isExpanded ? 'bg-bb-dark-300/40' : i < 3 ? 'bg-bb-accent/[0.02] hover:bg-bb-dark-300/30' : 'hover:bg-bb-dark-300/20'}` : `border-bb-light-300/30 ${isExpanded ? 'bg-bb-light-200/60' : i < 3 ? 'bg-bb-accent-dark/[0.03] hover:bg-bb-light-200/40' : 'hover:bg-bb-light-200/40'}`}`} onClick={() => setExpandedRow(isExpanded ? null : m.ensemble_name)}>
+                <React.Fragment key={m.ensemble_name}>
+                  <tr className={`border-b cursor-pointer transition-all duration-150 ${isDark ? `border-bb-dark-50/10 ${isExpanded ? 'bg-bb-dark-300/40' : i < 3 ? 'bg-bb-accent/[0.02] hover:bg-bb-dark-300/30' : 'hover:bg-bb-dark-300/20'}` : `border-bb-light-300/30 ${isExpanded ? 'bg-bb-light-200/60' : i < 3 ? 'bg-bb-accent-dark/[0.03] hover:bg-bb-light-200/40' : 'hover:bg-bb-light-200/40'}`}`} onClick={() => setExpandedRow(isExpanded ? null : m.ensemble_name)}>
                     <RankCell rank={i + 1} isDark={isDark} />
                     <td className="px-2 py-3">
                       <div className="flex flex-nowrap items-center gap-1">
@@ -303,8 +355,8 @@ function EnsembleTable({ data, description }) {
                     {DATASETS.map(d => <td key={d.key} className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{fmt(m[d.key])}%</td>)}
                     <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{fmt(m.ifr)}%</td>
                   </tr>
-                  {isExpanded && <DetailRow key={`${m.ensemble_name}-d`} m={m} colSpan={DATASETS.length + 4} isDark={isDark} />}
-                </>
+                  {isExpanded && <DetailRow m={m} colSpan={DATASETS.length + 4} isDark={isDark} />}
+                </React.Fragment>
               )
             })}
           </tbody>
@@ -317,9 +369,9 @@ function EnsembleTable({ data, description }) {
   )
 }
 
-/* ─── Phase 1 Table ─────────────────────────────────────────────── */
+/* ─── Individual Judges Table ───────────────────────────────────── */
 
-function Phase1Table() {
+function IndividualTable() {
   const { isDark } = useTheme()
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState('accuracy')
@@ -403,8 +455,8 @@ function Phase1Table() {
                 const isExpanded = expandedRow === key
                 const isTop3 = rank <= 3
                 return (
-                  <>
-                    <tr key={key} className={`border-b cursor-pointer transition-all duration-150 ${isDark ? `border-bb-dark-50/10 ${isExpanded ? 'bg-bb-dark-300/40' : isTop3 ? 'bg-bb-accent/[0.02] hover:bg-bb-dark-300/30' : 'hover:bg-bb-dark-300/20'}` : `border-bb-light-300/30 ${isExpanded ? 'bg-bb-light-200/60' : isTop3 ? 'bg-bb-accent-dark/[0.03] hover:bg-bb-light-200/40' : 'hover:bg-bb-light-200/40'}`}`} onClick={() => setExpandedRow(isExpanded ? null : key)}>
+                  <React.Fragment key={key}>
+                    <tr className={`border-b cursor-pointer transition-all duration-150 ${isDark ? `border-bb-dark-50/10 ${isExpanded ? 'bg-bb-dark-300/40' : isTop3 ? 'bg-bb-accent/[0.02] hover:bg-bb-dark-300/30' : 'hover:bg-bb-dark-300/20'}` : `border-bb-light-300/30 ${isExpanded ? 'bg-bb-light-200/60' : isTop3 ? 'bg-bb-accent-dark/[0.03] hover:bg-bb-light-200/40' : 'hover:bg-bb-light-200/40'}`}`} onClick={() => setExpandedRow(isExpanded ? null : key)}>
                       <RankCell rank={rank} isDark={isDark} />
                       <td className="px-2 py-3">
                         <ModelNameCell name={m.model.split('/')[1] || m.model} family={m.family} params={m.params} isDark={isDark} />
@@ -414,8 +466,8 @@ function Phase1Table() {
                       {DATASETS.map(d => <td key={d.key} className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{fmt(m[d.key])}%</td>)}
                       <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{fmt(m.ifr)}%</td>
                     </tr>
-                    {isExpanded && <DetailRow key={`${key}-d`} m={m} colSpan={DATASETS.length + 5} isDark={isDark} />}
-                  </>
+                    {isExpanded && <DetailRow m={m} colSpan={DATASETS.length + 5} isDark={isDark} />}
+                  </React.Fragment>
                 )
               })}
             </tbody>
@@ -440,7 +492,7 @@ function PersonaTable() {
   const sortedData = useMemo(() => {
     const data = personaData.map(m => ({
       ...m,
-      baseAcc: phase1AccMap[getUniqueKey(m)] || 0,
+      baseAcc: baseAccMap[getUniqueKey(m)] || 0,
     }))
     data.sort((a, b) => {
       const mult = sortDir === 'desc' ? -1 : 1
@@ -476,8 +528,8 @@ function PersonaTable() {
               const key = getUniqueKey(m)
               const isExpanded = expandedRow === key
               return (
-                <>
-                  <tr key={key} className={`border-b cursor-pointer transition-all duration-150 ${isDark ? `border-bb-dark-50/10 ${isExpanded ? 'bg-bb-dark-300/40' : i < 3 ? 'bg-bb-accent/[0.02] hover:bg-bb-dark-300/30' : 'hover:bg-bb-dark-300/20'}` : `border-bb-light-300/30 ${isExpanded ? 'bg-bb-light-200/60' : i < 3 ? 'bg-bb-accent-dark/[0.03] hover:bg-bb-light-200/40' : 'hover:bg-bb-light-200/40'}`}`} onClick={() => setExpandedRow(isExpanded ? null : key)}>
+                <React.Fragment key={key}>
+                  <tr className={`border-b cursor-pointer transition-all duration-150 ${isDark ? `border-bb-dark-50/10 ${isExpanded ? 'bg-bb-dark-300/40' : i < 3 ? 'bg-bb-accent/[0.02] hover:bg-bb-dark-300/30' : 'hover:bg-bb-dark-300/20'}` : `border-bb-light-300/30 ${isExpanded ? 'bg-bb-light-200/60' : i < 3 ? 'bg-bb-accent-dark/[0.03] hover:bg-bb-light-200/40' : 'hover:bg-bb-light-200/40'}`}`} onClick={() => setExpandedRow(isExpanded ? null : key)}>
                     <RankCell rank={i + 1} isDark={isDark} />
                     <td className="px-2 py-3">
                       <ModelNameCell name={m.model.split('/')[1] || m.model} family={m.family} params={m.params} isDark={isDark} />
@@ -497,17 +549,322 @@ function PersonaTable() {
                     })}
                     <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{fmt(m.ifr)}%</td>
                   </tr>
-                  {isExpanded && <DetailRow key={`${key}-d`} m={m} colSpan={PERSONAS.length + 5} isDark={isDark} />}
-                </>
+                  {isExpanded && <DetailRow m={m} colSpan={PERSONAS.length + 5} isDark={isDark} />}
+                </React.Fragment>
               )
             })}
           </tbody>
         </table>
       </div>
       <div className={`px-4 py-3 border-t text-xs text-center ${isDark ? 'border-bb-dark-50/10 text-gray-600' : 'border-bb-light-300/30 text-gray-400'}`}>
-        {sortedData.length} configs · Base Acc = Phase 1 individual accuracy · Δ = persona effect vs base · Click a row for dataset breakdown
+        {sortedData.length} configs · Base Acc = individual judge accuracy · Δ = persona effect vs base · Click a row for dataset breakdown
       </div>
     </div>
+  )
+}
+
+/* ─── Correlation format helper ─────────────────────────────────── */
+
+const fmtCorr = (v) => v != null ? v.toFixed(4) : '—'
+
+/** Heat-map color for correlation values: red→yellow→green */
+function corrColor(v, isDark) {
+  if (v == null) return isDark ? 'text-gray-600' : 'text-gray-400'
+  if (v >= 0.6) return isDark ? 'text-emerald-400' : 'text-emerald-600'
+  if (v >= 0.4) return isDark ? 'text-yellow-400' : 'text-yellow-600'
+  if (v >= 0.2) return isDark ? 'text-orange-400' : 'text-orange-600'
+  return isDark ? 'text-red-400' : 'text-red-600'
+}
+
+/** Cohen's κ interpretation (Landis & Koch 1977) */
+function kappaLabel(v) {
+  if (v == null) return ''
+  if (v >= 0.81) return 'Excellent'
+  if (v >= 0.61) return 'Good'
+  if (v >= 0.41) return 'Moderate'
+  if (v >= 0.21) return 'Fair'
+  return 'Poor'
+}
+
+function kappaLabelColor(v, isDark) {
+  if (v == null) return ''
+  if (v >= 0.61) return isDark ? 'text-emerald-400/70' : 'text-emerald-600/70'
+  if (v >= 0.41) return isDark ? 'text-yellow-400/70' : 'text-yellow-600/70'
+  return isDark ? 'text-red-400/70' : 'text-red-600/70'
+}
+
+/* ─── SummEval Detail Row ───────────────────────────────────────── */
+
+function SummevalDetailRow({ m, colSpan, isDark }) {
+  const dims = SUMMEVAL_DIMS || ['coherence', 'consistency', 'fluency', 'relevance']
+  return (
+    <tr className={isDark ? 'bg-bb-dark-400/30' : 'bg-bb-light-200/40'}>
+      <td colSpan={colSpan} className="px-6 py-5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm animate-fade-in">
+          {dims.map(dim => {
+            const d = m.dimensions?.[dim] || {}
+            return (
+              <div key={dim} className={`p-3 rounded-lg ${isDark ? 'bg-bb-dark-300/40' : 'bg-white/60'}`}>
+                <div className={`text-[10px] uppercase tracking-wider mb-2 font-semibold ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>{DIM_LABELS[dim] || dim}</div>
+                <div className="space-y-1">
+                  <div className={`font-mono text-[12px] ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>r={fmtCorr(d.pearson)}</div>
+                  <div className={`font-mono text-[12px] ${isDark ? 'text-bb-accent' : 'text-bb-accent-dark'}`}>ρ={fmtCorr(d.spearman)}</div>
+                  <div className={`font-mono text-[12px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>κ={fmtCorr(d.kappa)}</div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </td>
+    </tr>
+  )
+}
+
+/* ─── SummEval Table ────────────────────────────────────────────── */
+
+function SummevalTable() {
+  const { isDark } = useTheme()
+  const [sortKey, setSortKey] = useState('spearman')
+  const [sortDir, setSortDir] = useState('desc')
+  const [expandedRow, setExpandedRow] = useState(null)
+  const [familyFilter, setFamilyFilter] = useState('all')
+  const [showFilters, setShowFilters] = useState(false)
+
+  const families = useMemo(() => ['all', ...new Set(summevalData.map(m => m.family))].sort(), [])
+
+  const sortedData = useMemo(() => {
+    let data = [...summevalData]
+    if (familyFilter !== 'all') data = data.filter(m => m.family === familyFilter)
+    data.sort((a, b) => {
+      const mult = sortDir === 'desc' ? -1 : 1
+      return typeof a[sortKey] === 'string' ? a[sortKey].localeCompare(b[sortKey]) * mult : (a[sortKey] - b[sortKey]) * mult
+    })
+    return data
+  }, [sortKey, sortDir, familyFilter])
+
+  function toggleSort(key) { if (sortKey === key) setSortDir(d => d === 'desc' ? 'asc' : 'desc'); else { setSortKey(key); setSortDir('desc') } }
+  const SortHeader = ({ k, children, className }) => <SortHeaderCell k={k} sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} isDark={isDark} className={className}>{children}</SortHeaderCell>
+  const activeFilterCount = familyFilter !== 'all' ? 1 : 0
+
+  return (
+    <>
+      {/* Filters */}
+      <div className={`rounded-xl p-4 mb-6 backdrop-blur-xl border transition-all ${isDark ? 'bg-bb-dark-300/60 border-bb-dark-50/30' : 'bg-white/70 border-bb-light-300/60 shadow-sm'}`}>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <span className="font-semibold">Human Agreement:</span> Correlation with human expert annotations across 4 quality dimensions on 1600 summaries.
+            </span>
+          </div>
+          <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${showFilters ? (isDark ? 'bg-bb-accent/10 text-bb-accent border border-bb-accent/30' : 'bg-bb-accent-dark/10 text-bb-accent-dark border border-bb-accent-dark/30') : (isDark ? 'bg-bb-dark-400/60 border border-bb-dark-50/20 text-gray-400 hover:text-white' : 'bg-bb-light-100 border border-bb-light-300 text-gray-500 hover:text-gray-700')}`}>
+            <Filter className="w-4 h-4" /> Filters
+            {activeFilterCount > 0 && <span className={`ml-1 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold ${isDark ? 'bg-bb-accent/20 text-bb-accent' : 'bg-bb-accent-dark/20 text-bb-accent-dark'}`}>{activeFilterCount}</span>}
+          </button>
+        </div>
+        {showFilters && (
+          <div className={`mt-3 pt-3 border-t ${isDark ? 'border-bb-dark-50/10' : 'border-bb-light-300/50'}`}>
+            <div className={`text-xs mb-2 font-medium ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Model Family</div>
+            <div className="flex flex-wrap gap-2">
+              {families.map(f => <button key={f} onClick={() => setFamilyFilter(f)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${familyFilter === f ? (isDark ? 'bg-bb-accent/20 text-bb-accent border border-bb-accent/30' : 'bg-bb-accent-dark/15 text-bb-accent-dark border border-bb-accent-dark/30') : (isDark ? 'bg-bb-dark-400/40 text-gray-500 border border-bb-dark-50/10 hover:text-gray-300' : 'bg-bb-light-200 text-gray-500 border border-bb-light-300 hover:text-gray-700')}`}>{f === 'all' ? 'All' : f}</button>)}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Table */}
+      <div className={`rounded-xl overflow-hidden border ${isDark ? 'bg-bb-dark-300/40 border-bb-dark-50/30 neon-border' : 'bg-white/80 border-bb-light-300/60 shadow-lg'}`}>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className={`border-b ${isDark ? 'border-bb-dark-50/20 bg-bb-dark-400/40' : 'border-bb-light-300/50 bg-bb-light-100/80'}`}>
+                <th className={`px-2 py-3 text-[11px] font-semibold uppercase tracking-wider text-center w-10 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>#</th>
+                <SortHeader k="model" className="text-left">Model</SortHeader>
+                <SortHeader k="pearson">Pearson</SortHeader>
+                <SortHeader k="spearman">Spearman</SortHeader>
+                <SortHeader k="kappa">Cohen's κ</SortHeader>
+                <SortHeader k="accuracy">Accuracy</SortHeader>
+                <SortHeader k="mse">MSE</SortHeader>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedData.map((m, i) => {
+                const isExpanded = expandedRow === m.shortName
+                const isTop3 = i < 3
+                return (
+                  <React.Fragment key={m.shortName}>
+                    <tr className={`border-b cursor-pointer transition-all duration-150 ${isDark ? `border-bb-dark-50/10 ${isExpanded ? 'bg-bb-dark-300/40' : isTop3 ? 'bg-bb-accent/[0.02] hover:bg-bb-dark-300/30' : 'hover:bg-bb-dark-300/20'}` : `border-bb-light-300/30 ${isExpanded ? 'bg-bb-light-200/60' : isTop3 ? 'bg-bb-accent-dark/[0.03] hover:bg-bb-light-200/40' : 'hover:bg-bb-light-200/40'}`}`} onClick={() => setExpandedRow(isExpanded ? null : m.shortName)}>
+                      <RankCell rank={i + 1} isDark={isDark} />
+                      <td className="px-2 py-3">
+                        <ModelNameCell name={m.model.split('/')[1] || m.model} family={m.family} params={m.params} isDark={isDark} />
+                      </td>
+                      <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${corrColor(m.pearson, isDark)}`}>{fmtCorr(m.pearson)}</td>
+                      <td className="px-2 py-3 text-center whitespace-nowrap"><span className={`font-mono text-[13px] font-semibold ${corrColor(m.spearman, isDark)}`}>{fmtCorr(m.spearman)}</span></td>
+                      <td className="px-2 py-3 text-center whitespace-nowrap">
+                        <span className={`font-mono text-[13px] ${corrColor(m.kappa, isDark)}`}>{fmtCorr(m.kappa)}</span>
+                        {m.kappa != null && <span className={`ml-1 text-[9px] font-medium ${kappaLabelColor(m.kappa, isDark)}`}>{kappaLabel(m.kappa)}</span>}
+                      </td>
+                      <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{fmt(m.accuracy)}%</td>
+                      <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{m.mse?.toFixed(2) ?? '—'}</td>
+                    </tr>
+                    {isExpanded && <SummevalDetailRow m={m} colSpan={7} isDark={isDark} />}
+                  </React.Fragment>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div className={`px-4 py-3 border-t text-xs text-center ${isDark ? 'border-bb-dark-50/10 text-gray-600' : 'border-bb-light-300/30 text-gray-400'}`}>
+          {sortedData.length} judges · Ranked by Spearman correlation · Click a row for per-dimension breakdown
+        </div>
+      </div>
+    </>
+  )
+}
+
+/* ─── MT-Bench Detail Row ───────────────────────────────────────── */
+
+function MtbenchDetailRow({ m, colSpan, isDark }) {
+  const cats = MTBENCH_CATEGORIES || ['coding', 'extraction', 'humanities', 'math', 'reasoning', 'roleplay', 'stem', 'writing']
+  return (
+    <tr className={isDark ? 'bg-bb-dark-400/30' : 'bg-bb-light-200/40'}>
+      <td colSpan={colSpan} className="px-6 py-5">
+        <div className="space-y-4 animate-fade-in">
+          {/* Per-category */}
+          <div>
+            <div className={`text-[10px] uppercase tracking-wider mb-2 font-semibold ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>Per Category (Averaged)</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3 text-sm">
+              {cats.map(cat => {
+                const c = m.categories?.[cat] || {}
+                return (
+                  <div key={cat} className={`p-3 rounded-lg ${isDark ? 'bg-bb-dark-300/40' : 'bg-white/60'}`}>
+                    <div className={`text-[10px] uppercase tracking-wider mb-2 font-semibold ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>{CAT_LABELS[cat] || cat}</div>
+                    <div className={`font-mono text-[12px] font-semibold ${isDark ? 'text-bb-accent' : 'text-bb-accent-dark'}`}>ρ={fmtCorr(c.spearman)}</div>
+                    <div className={`font-mono text-[11px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>κ={fmtCorr(c.cohens_kappa)}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+          {/* Per-combo */}
+          {m.combos && m.combos.length > 0 && (
+            <div>
+              <div className={`text-[10px] uppercase tracking-wider mb-2 font-semibold ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>Per Oracle × Student</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                {m.combos.map((c, idx) => (
+                  <div key={idx} className={`p-3 rounded-lg ${isDark ? 'bg-bb-dark-300/40' : 'bg-white/60'}`}>
+                    <div className={`text-[10px] uppercase tracking-wider mb-1 font-semibold ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>{c.oracle}</div>
+                    <div className={`text-[9px] mb-2 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>→ {c.student}</div>
+                    <div className={`font-mono text-[12px] font-semibold ${isDark ? 'text-bb-accent' : 'text-bb-accent-dark'}`}>ρ={fmtCorr(c.spearman)}</div>
+                    <div className={`font-mono text-[11px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>r={fmtCorr(c.pearson)} · κ={fmtCorr(c.kappa)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </td>
+    </tr>
+  )
+}
+
+/* ─── MT-Bench Table ────────────────────────────────────────────── */
+
+function MtbenchTable() {
+  const { isDark } = useTheme()
+  const [sortKey, setSortKey] = useState('spearman')
+  const [sortDir, setSortDir] = useState('desc')
+  const [expandedRow, setExpandedRow] = useState(null)
+  const [familyFilter, setFamilyFilter] = useState('all')
+  const [showFilters, setShowFilters] = useState(false)
+
+  const families = useMemo(() => ['all', ...new Set(mtbenchData.map(m => m.family))].sort(), [])
+
+  const sortedData = useMemo(() => {
+    let data = [...mtbenchData]
+    if (familyFilter !== 'all') data = data.filter(m => m.family === familyFilter)
+    data.sort((a, b) => {
+      const mult = sortDir === 'desc' ? -1 : 1
+      return typeof a[sortKey] === 'string' ? a[sortKey].localeCompare(b[sortKey]) * mult : (a[sortKey] - b[sortKey]) * mult
+    })
+    return data
+  }, [sortKey, sortDir, familyFilter])
+
+  function toggleSort(key) { if (sortKey === key) setSortDir(d => d === 'desc' ? 'asc' : 'desc'); else { setSortKey(key); setSortDir('desc') } }
+  const SortHeader = ({ k, children, className }) => <SortHeaderCell k={k} sortKey={sortKey} sortDir={sortDir} toggleSort={toggleSort} isDark={isDark} className={className}>{children}</SortHeaderCell>
+  const activeFilterCount = familyFilter !== 'all' ? 1 : 0
+
+  return (
+    <>
+      {/* Filters */}
+      <div className={`rounded-xl p-4 mb-6 backdrop-blur-xl border transition-all ${isDark ? 'bg-bb-dark-300/60 border-bb-dark-50/30' : 'bg-white/70 border-bb-light-300/60 shadow-sm'}`}>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <span className="font-semibold">LLM Agreement:</span> Correlation with LLM oracle scores (GPT-OSS-120B, Qwen3.5-397B) on 80 multi-turn questions. Results averaged across 2 oracles × 2 students.
+            </span>
+          </div>
+          <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${showFilters ? (isDark ? 'bg-bb-accent/10 text-bb-accent border border-bb-accent/30' : 'bg-bb-accent-dark/10 text-bb-accent-dark border border-bb-accent-dark/30') : (isDark ? 'bg-bb-dark-400/60 border border-bb-dark-50/20 text-gray-400 hover:text-white' : 'bg-bb-light-100 border border-bb-light-300 text-gray-500 hover:text-gray-700')}`}>
+            <Filter className="w-4 h-4" /> Filters
+            {activeFilterCount > 0 && <span className={`ml-1 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold ${isDark ? 'bg-bb-accent/20 text-bb-accent' : 'bg-bb-accent-dark/20 text-bb-accent-dark'}`}>{activeFilterCount}</span>}
+          </button>
+        </div>
+        {showFilters && (
+          <div className={`mt-3 pt-3 border-t ${isDark ? 'border-bb-dark-50/10' : 'border-bb-light-300/50'}`}>
+            <div className={`text-xs mb-2 font-medium ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Model Family</div>
+            <div className="flex flex-wrap gap-2">
+              {families.map(f => <button key={f} onClick={() => setFamilyFilter(f)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${familyFilter === f ? (isDark ? 'bg-bb-accent/20 text-bb-accent border border-bb-accent/30' : 'bg-bb-accent-dark/15 text-bb-accent-dark border border-bb-accent-dark/30') : (isDark ? 'bg-bb-dark-400/40 text-gray-500 border border-bb-dark-50/10 hover:text-gray-300' : 'bg-bb-light-200 text-gray-500 border border-bb-light-300 hover:text-gray-700')}`}>{f === 'all' ? 'All' : f}</button>)}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Table */}
+      <div className={`rounded-xl overflow-hidden border ${isDark ? 'bg-bb-dark-300/40 border-bb-dark-50/30 neon-border' : 'bg-white/80 border-bb-light-300/60 shadow-lg'}`}>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className={`border-b ${isDark ? 'border-bb-dark-50/20 bg-bb-dark-400/40' : 'border-bb-light-300/50 bg-bb-light-100/80'}`}>
+                <th className={`px-2 py-3 text-[11px] font-semibold uppercase tracking-wider text-center w-10 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>#</th>
+                <SortHeader k="model" className="text-left">Model</SortHeader>
+                <SortHeader k="pearson">Pearson</SortHeader>
+                <SortHeader k="spearman">Spearman</SortHeader>
+                <SortHeader k="kappa">Cohen's κ</SortHeader>
+                <SortHeader k="accuracy">Accuracy</SortHeader>
+                <SortHeader k="mse">MSE</SortHeader>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedData.map((m, i) => {
+                const isExpanded = expandedRow === m.shortName
+                const isTop3 = i < 3
+                return (
+                  <React.Fragment key={m.shortName}>
+                    <tr className={`border-b cursor-pointer transition-all duration-150 ${isDark ? `border-bb-dark-50/10 ${isExpanded ? 'bg-bb-dark-300/40' : isTop3 ? 'bg-bb-accent/[0.02] hover:bg-bb-dark-300/30' : 'hover:bg-bb-dark-300/20'}` : `border-bb-light-300/30 ${isExpanded ? 'bg-bb-light-200/60' : isTop3 ? 'bg-bb-accent-dark/[0.03] hover:bg-bb-light-200/40' : 'hover:bg-bb-light-200/40'}`}`} onClick={() => setExpandedRow(isExpanded ? null : m.shortName)}>
+                      <RankCell rank={i + 1} isDark={isDark} />
+                      <td className="px-2 py-3">
+                        <ModelNameCell name={m.model.split('/')[1] || m.model} family={m.family} params={m.params} isDark={isDark} />
+                      </td>
+                      <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${corrColor(m.pearson, isDark)}`}>{fmtCorr(m.pearson)}</td>
+                      <td className="px-2 py-3 text-center whitespace-nowrap"><span className={`font-mono text-[13px] font-semibold ${corrColor(m.spearman, isDark)}`}>{fmtCorr(m.spearman)}</span></td>
+                      <td className="px-2 py-3 text-center whitespace-nowrap">
+                        <span className={`font-mono text-[13px] ${corrColor(m.kappa, isDark)}`}>{fmtCorr(m.kappa)}</span>
+                        {m.kappa != null && <span className={`ml-1 text-[9px] font-medium ${kappaLabelColor(m.kappa, isDark)}`}>{kappaLabel(m.kappa)}</span>}
+                      </td>
+                      <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{fmt(m.accuracy)}%</td>
+                      <td className={`px-2 py-3 text-center font-mono text-[13px] whitespace-nowrap ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{m.mse?.toFixed(2) ?? '—'}</td>
+                    </tr>
+                    {isExpanded && <MtbenchDetailRow m={m} colSpan={7} isDark={isDark} />}
+                  </React.Fragment>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div className={`px-4 py-3 border-t text-xs text-center ${isDark ? 'border-bb-dark-50/10 text-gray-600' : 'border-bb-light-300/30 text-gray-400'}`}>
+          {sortedData.length} judges · Averaged across 4 oracle×student combos · Click a row for category & combo breakdown
+        </div>
+      </div>
+    </>
   )
 }
 
@@ -515,7 +872,16 @@ function PersonaTable() {
 
 export default function Leaderboard() {
   const { isDark } = useTheme()
-  const [activeTab, setActiveTab] = useState('phase1')
+  const [mode, setMode] = useState('closed')
+  const [activeTab, setActiveTab] = useState('individual')
+  const [copied, setCopied] = useState(false)
+
+  const handleModeSwitch = (newMode) => {
+    setMode(newMode)
+    setActiveTab(newMode === 'closed' ? 'individual' : 'summeval')
+  }
+
+  const tabs = mode === 'closed' ? CLOSED_TABS : OPEN_TABS
 
   const top3 = useMemo(() => [...modelData].sort((a, b) => b.accuracy - a.accuracy).slice(0, 3), [])
 
@@ -540,10 +906,19 @@ export default function Leaderboard() {
             </h1>
           </AnimateIn>
           <AnimateIn delay={300} direction="up">
-            <p className={`text-lg sm:text-xl max-w-2xl mx-auto mb-5 font-light ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className={`text-lg sm:text-xl max-w-2xl mx-auto mb-3 font-light ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               Can Small Language Models Judge as Well as Large Language Models?
             </p>
           </AnimateIn>
+
+          {/* Typing ticker */}
+          <AnimateIn delay={400} direction="up">
+            <div className={`h-8 flex items-center justify-center mb-5 text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              <span className="mr-2">&gt;</span>
+              <TypingEffect />
+            </div>
+          </AnimateIn>
+
           <AnimateIn delay={450} direction="up">
             <div className="flex flex-wrap items-center justify-center gap-2 text-xs">
               <a href="#" className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono transition-all hover:scale-105 ${isDark ? 'bg-bb-dark-300/60 text-gray-400 border border-bb-dark-50/20 hover:text-gray-300' : 'bg-bb-light-200 text-gray-500 border border-bb-light-300 hover:text-gray-700'}`}>
@@ -554,7 +929,62 @@ export default function Leaderboard() {
               </a>
             </div>
           </AnimateIn>
-          <AnimateIn delay={600} direction="up">
+
+          {/* Install Command */}
+          <AnimateIn delay={550} direction="up">
+            <div className="max-w-md mx-auto mt-6 mb-2">
+              <div className={`group relative rounded-xl overflow-hidden transition-all duration-500 ${
+                isDark
+                  ? 'bg-[#0a0e18] border border-bb-dark-50/20 hover:border-bb-accent/30 shadow-xl shadow-black/30'
+                  : 'bg-[#f7f8fc] border border-gray-200/60 hover:border-bb-accent-dark/30 shadow-md'
+              }`}>
+                {/* Header bar */}
+                <div className={`flex items-center justify-between px-4 py-2 border-b ${
+                  isDark ? 'border-bb-dark-50/10 bg-white/[0.02]' : 'border-gray-200/30 bg-gray-50/50'
+                }`}>
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-[#ff5f57]/80" />
+                      <div className="w-2 h-2 rounded-full bg-[#febc2e]/80" />
+                      <div className="w-2 h-2 rounded-full bg-[#28c840]/80" />
+                    </div>
+                    <span className={`text-[9px] uppercase tracking-widest font-mono ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>terminal</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText('pip install slmjury')
+                      setCopied(true)
+                      setTimeout(() => setCopied(false), 2000)
+                    }}
+                    className={`text-[10px] font-mono px-2 py-0.5 rounded transition-all duration-200 flex items-center gap-1 ${
+                      copied
+                        ? isDark ? 'text-bb-accent bg-bb-accent/10' : 'text-bb-accent-dark bg-bb-accent-dark/10'
+                        : isDark ? 'text-gray-600 hover:text-bb-accent hover:bg-bb-accent/10' : 'text-gray-400 hover:text-bb-accent-dark hover:bg-bb-accent-dark/10'
+                    }`}
+                  >
+                    {copied ? <><Check className="w-3 h-3" /> Copied!</> : <><Copy className="w-3 h-3" /> Copy</>}
+                  </button>
+                </div>
+
+                {/* Code content */}
+                <div className="px-4 py-3">
+                  <code className="text-sm font-mono">
+                    <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>$</span>
+                    {' '}
+                    <span style={{ color: isDark ? '#c084fc' : '#7c3aed' }}>pip</span>
+                    {' '}
+                    <span style={{ color: isDark ? '#60a5fa' : '#2563eb' }}>install</span>
+                    {' '}
+                    <span style={{ color: isDark ? '#38bdf8' : '#0284c7' }}>slmjury</span>
+                    <span className={`ml-2 text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}># coming soon</span>
+                    <span className={`inline-block w-[8px] h-[16px] ml-0.5 align-middle rounded-[1px] ${isDark ? 'bg-bb-accent' : 'bg-bb-accent-dark'}`} style={{ animation: 'blink 1s step-end infinite' }} />
+                  </code>
+                </div>
+              </div>
+            </div>
+          </AnimateIn>
+
+          <AnimateIn delay={650} direction="up">
             <div className={`mt-10 rounded-2xl p-6 sm:p-8 backdrop-blur-xl border ${isDark ? 'bg-bb-dark-300/40 border-bb-dark-50/20' : 'bg-white/50 border-bb-light-300/40'}`}>
               <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
                 {projectInfo.authors.map((a, i) => (
@@ -583,9 +1013,9 @@ export default function Leaderboard() {
       <AnimateIn delay={700} direction="up">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
           <StatCard icon={Brain} label="Judge Models" value="16" sub="0.6B to 14B parameters" />
-          <StatCard icon={Database} label="Problems Evaluated" value="32K+" sub="Across 8 benchmark datasets" />
-          <StatCard icon={Layers} label="Total Experiments" value="4,000+" sub="Judges × Students × Settings" />
-          <StatCard icon={FlaskConical} label="Evaluation Techniques" value="4" sub="Token Budget · Persona · Ensemble · Debate" />
+          <StatCard icon={Database} label="Benchmarks" value="10" sub="8 closed-ended · 2 open-ended" />
+          <StatCard icon={Layers} label="Total Experiments" value="4,100+" sub="Judges × Students × Settings" />
+          <StatCard icon={FlaskConical} label="Evaluation Modes" value="6" sub="Token · Persona · Ensemble · Debate · Human · LLM" />
         </div>
       </AnimateIn>
 
@@ -604,10 +1034,31 @@ export default function Leaderboard() {
         </div>
       </AnimateIn>
 
-      {/* Tab Bar */}
+      {/* Tab Bar — sticky below navbar */}
+      <div className={`sticky top-16 z-40 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 backdrop-blur-xl transition-all ${isDark ? 'bg-bb-dark-500/80' : 'bg-bb-light-100/80'}`}>
       <AnimateIn delay={1100} direction="up">
+        {/* Closed-Ended / Open-Ended Toggle */}
+        <div className="flex items-center justify-center mb-4">
+          <div className={`inline-flex rounded-lg p-1 ${isDark ? 'bg-bb-dark-300/60 border border-bb-dark-50/30' : 'bg-white/70 border border-bb-light-300/60 shadow-sm'}`}>
+            {[
+              { id: 'closed', label: 'Closed-Ended', sub: 'Accuracy' },
+              { id: 'open', label: 'Open-Ended', sub: 'Correlation' },
+            ].map(m => (
+              <button key={m.id} onClick={() => handleModeSwitch(m.id)}
+                className={`flex flex-col items-center px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${mode === m.id
+                  ? isDark ? 'bg-bb-accent/15 text-bb-accent shadow-[0_0_15px_rgba(0,170,255,0.1)] border border-bb-accent/20' : 'bg-bb-accent-dark/10 text-bb-accent-dark border border-bb-accent-dark/20'
+                  : isDark ? 'text-gray-500 hover:text-gray-300 border border-transparent' : 'text-gray-500 hover:text-gray-700 border border-transparent'
+                }`}>
+                <span>{m.label}</span>
+                <span className={`text-[10px] font-normal ${mode === m.id ? (isDark ? 'text-bb-accent/60' : 'text-bb-accent-dark/60') : (isDark ? 'text-gray-600' : 'text-gray-400')}`}>{m.sub}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tab Bar */}
         <div className={`flex flex-wrap gap-2 mb-6 p-1.5 rounded-xl ${isDark ? 'bg-bb-dark-300/60 border border-bb-dark-50/30' : 'bg-white/70 border border-bb-light-300/60 shadow-sm'}`}>
-          {TABS.map(tab => {
+          {tabs.map(tab => {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
             return (
@@ -624,7 +1075,7 @@ export default function Leaderboard() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'phase1' && <Phase1Table />}
+        {activeTab === 'individual' && <IndividualTable />}
 
         {activeTab === 'majority' && (
           <>
@@ -643,7 +1094,7 @@ export default function Leaderboard() {
             <div className={`rounded-xl p-4 mb-6 ${isDark ? 'bg-bb-dark-300/40 border border-bb-dark-50/20' : 'bg-white/60 border border-bb-light-300/40 shadow-sm'}`}>
               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                 <span className="font-semibold">Persona Effect:</span> Each judge adopts 6 distinct evaluation personas to assess how role-prompting impacts judging accuracy.
-                <span className={`ml-2 text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>Base Acc = Phase 1 accuracy · Δ = persona effect vs base</span>
+                <span className={`ml-2 text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>Base Acc = individual accuracy · Δ = persona effect vs base</span>
               </p>
             </div>
             <PersonaTable />
@@ -661,7 +1112,10 @@ export default function Leaderboard() {
             <EnsembleTable data={madData} description="multi-agent debate" />
           </>
         )}
+        {activeTab === 'summeval' && <SummevalTable />}
+        {activeTab === 'mtbench' && <MtbenchTable />}
       </AnimateIn>
+      </div>
     </div>
   )
 }

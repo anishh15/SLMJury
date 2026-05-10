@@ -79,8 +79,8 @@ class JudgeEvaluator:
 
     def _compute_metrics(self):
         """Compute accuracy, IFR, and collect disagreements in one pass."""
-        correct_count = 0
-        valid_count = 0
+        self.correct_count = 0
+        self.valid_count = 0
         self.disagreements = []
 
         for item in self.judgements:
@@ -88,9 +88,9 @@ class JudgeEvaluator:
             judge_verdict = item.get("judgement", "Undefined").lower()
 
             if judge_verdict in ("correct", "incorrect"):
-                valid_count += 1
+                self.valid_count += 1
                 if judge_verdict == expected:
-                    correct_count += 1
+                    self.correct_count += 1
                 else:
                     self.disagreements.append({
                         "problem_id": item.get("problem_id"),
@@ -105,8 +105,8 @@ class JudgeEvaluator:
                     })
 
         n = len(self.judgements)
-        self.accuracy = correct_count / n if n > 0 else 0.0
-        self.ifr = valid_count / n if n > 0 else 0.0
+        self.accuracy = self.correct_count / n if n > 0 else 0.0
+        self.ifr = self.valid_count / n if n > 0 else 0.0
         self.disagreement_rate = len(self.disagreements) / n if n > 0 else 0.0
 
     def _get_expected_verdict(self, item: dict) -> tuple[str, str]:
@@ -136,8 +136,8 @@ class JudgeEvaluator:
                 "disagreement_rate": round(self.disagreement_rate, 4),
             },
             "counts": {
-                "correct_verdicts": int(self.accuracy * len(self.judgements)),
-                "valid_verdicts": int(self.ifr * len(self.judgements)),
+                "correct_verdicts": self.correct_count,
+                "valid_verdicts": self.valid_count,
                 "disagreements": len(self.disagreements),
             },
             "timestamp": datetime.now().isoformat(),

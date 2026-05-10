@@ -5,16 +5,16 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "slmjury"
 version = "0.1.0"
-description = "SLMJury: Can Small Language Models Judge Reasoning as Well as Large Ones?"
+description = "SLMJury: Can Small Language Models Judge as Well as Large Language Models?"
 readme = "README.md"
 license = {text = "Apache-2.0"}
 authors = [
-    {name = "Anish Laddha", email = "23ucs535@lnmiit.ac.in"},
+    {name = "Anish Laddha", email = "anshladdha15@gmail.com"},
     {name = "Nitesh Pradhan", email = "nitesh.pradhan@lnmiit.ac.in"},
     {name = "Gaurav Srivastava", email = "gks@vt.edu"},
 ]
 maintainers = [
-    {name = "Anish Laddha", email = "23ucs535@lnmiit.ac.in"},
+    {name = "Anish Laddha", email = "anshladdha15@gmail.com"},
 ]
 keywords = [
     "slm",
