@@ -47,6 +47,9 @@ results/
 # Temp scripts and generated files
 temp/
 
+# Generated figures (PDF outputs from generate_figures.py)
+figures/
+
 # Models (downloaded weights)
 models/
 *.bin

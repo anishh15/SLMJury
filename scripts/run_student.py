@@ -23,7 +23,8 @@ def main():
         "--datasets", nargs="+",
         default=["gsm8k", "gsm_plus", "math", "arc_easy", "arc_challenge",
                  "hellaswag", "winogrande", "truthfulqa"],
-        help="Datasets to solve (default: all)",
+        help="Closed-ended datasets to solve (default: all 8). "
+             "Open-ended datasets (SummEval, MT-Bench) use run_scoring_judge.py.",
     )
     parser.add_argument("--num-samples", type=int, default=None, help="Limit problems per dataset")
     parser.add_argument("--output-dir", default="results/student_solutions")

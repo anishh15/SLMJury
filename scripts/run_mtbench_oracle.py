@@ -22,20 +22,7 @@ from slmjury.parsers.score import parse_score
 
 logger = logging.getLogger(__name__)
 
-# Oracle scoring prompt — identical to PROMPT_MTBENCH in scoring_judge.py
-# to ensure fair SLM-LLM correlation measurement.
-PROMPT_MTBENCH = (
-    "Rate the overall quality of the assistant's responses in the following "
-    "2-turn conversation on a scale of 1-5.\n"
-    "1 = Very poor, 2 = Poor, 3 = Average, 4 = Good, 5 = Excellent.\n\n"
-    "[Turn 1 Question]:\n{turn1_question}\n\n"
-    "[Turn 1 Response]:\n{turn1_response}\n\n"
-    "[Turn 2 Question]:\n{turn2_question}\n\n"
-    "[Turn 2 Response]:\n{turn2_response}\n\n"
-    "Consider helpfulness, accuracy, depth, creativity, and how well "
-    "the assistant maintains context across both turns.\n"
-    "Provide your rating as: \\boxed{{SCORE}}"
-)
+from slmjury.core.scoring_judge import PROMPT_MTBENCH
 
 
 def score_responses(

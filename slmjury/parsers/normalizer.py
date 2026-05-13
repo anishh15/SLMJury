@@ -1,8 +1,9 @@
 """Robust answer normalization and comparison across dataset types.
 
 Compares predicted answers against ground truth for numeric (GSM8K, GSM-Plus),
-LaTeX (MATH), and multiple choice (ARC) datasets. Uses SymPy for symbolic
-math comparison and handles edge cases like fractions, units, and commas.
+LaTeX (MATH), and multiple choice (ARC-Easy, ARC-Challenge, HellaSwag,
+WinoGrande, TruthfulQA) datasets. Uses SymPy for symbolic math comparison
+and handles edge cases like fractions, units, and commas.
 """
 
 import re
@@ -86,25 +87,6 @@ def normalize_numeric(value: str) -> str:
     except ValueError:
         return value.strip()
 
-
-def get_comparison_function(dataset_name: str):
-    """Get the appropriate comparison function for a dataset.
-
-    Args:
-        dataset_name: Name of the dataset.
-
-    Returns:
-        Comparison function that takes (pred, gold) and returns bool.
-    """
-    name = dataset_name.lower().replace("-", "_").replace(" ", "_")
-
-    if name in ("gsm8k", "gsm_plus", "gsmplus"):
-        return _compare_numeric
-    elif name in ("math", "hendrycks_math", "competition_math"):
-        return _compare_latex
-    elif name in ("arc_easy", "arc_challenge", "arc", "ai2_arc"):
-        return _compare_multiple_choice
-    return _compare_numeric
 
 
 # --- Multiple choice comparison ---

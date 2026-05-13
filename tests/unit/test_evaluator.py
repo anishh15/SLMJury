@@ -117,7 +117,7 @@ class TestJudgeEvaluator:
         evaluator.evaluate()
         # p1: student=4, gt=4, correct → judge says Correct → match
         # p2: student=5, gt=6, incorrect → judge says Incorrect → match
-        # p3: Undefined → not counted as valid
+        # p3: Undefined → counted as incorrect (denominator = 3, correct = 2)
         assert evaluator.accuracy == pytest.approx(2 / 3, abs=0.01)
 
     def test_ifr_calculation(self, sample_judgements):
