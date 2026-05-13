@@ -1,538 +1,483 @@
 """
-Generate all figures for the SLMJury paper.
-Data-driven: reads from website/src/data/modelData.js (single source of truth).
-Subtle, light, modern theme. Clean white backgrounds.
+Generate publication-quality figures for the SLMJury paper.
+All data is read from website/src/data/modelData.js (single source of truth).
 Output: PDF files in figures/ directory.
+
+Figures:
+  1. Token Budget        — Grouped bar: 10-token vs 8,192-token accuracy
+  2. Overthinking Delta   — Diverging horizontal bar: Δ(t10 − t8192) per model
+  3. Strategy Comparison  — Bar: best individual / persona / ensemble / debate
+  4. Dataset Heatmap      — All 8 datasets × top judges (t10)
+  5. Persona Sensitivity  — Line plot for t10 persona judges
+  6. Scaling Curve        — Grouped bar by model family and parameter size
+  7. Instruction Following — Grouped bar: IFR at t10 vs t8192
 """
 
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
 import matplotlib.patches as mpatches
 import numpy as np
 import os
 import re
 import json
 
-# ── Subtle Light Theme ──
-# Primary blues (soft, not saturated)
-SOFT_NAVY = '#4472C4'
-SOFT_BLUE = '#6B9BD2'
-LIGHT_BLUE = '#9DC3E6'
-PALE_BLUE = '#D6E4F0'
-VERY_PALE = '#EDF2F7'
+# ═══════════════════════════════════════════════════════════════════════
+# Publication Color Palette (EMNLP / ACL — muted, grayscale-safe)
+# ═══════════════════════════════════════════════════════════════════════
+C_NAVY   = '#2C5F8A'
+C_BLUE   = '#5B9BD5'
+C_LTBLUE = '#A8CCEB'
+C_ORANGE = '#D47B2F'
+C_GREEN  = '#548235'
+C_RED    = '#C0504D'
+C_TEAL   = '#3A8F85'
+C_PURPLE = '#7B5EA7'
+C_GOLD   = '#C49B2A'
 
-# Accents (muted, pastel-ish)
-SOFT_ORANGE = '#ED7D31'
-SOFT_GREEN = '#70AD47'
-SOFT_RED = '#E06666'
-SOFT_TEAL = '#4DB6AC'
-SOFT_PURPLE = '#9B8EC5'
-SOFT_GOLD = '#FFB74D'
+C_TEXT   = '#2D2D2D'
+C_MTEXT  = '#555555'
+C_LGRAY  = '#CCCCCC'
+C_BG     = '#FFFFFF'
 
-# Neutrals
-DARK_TEXT = '#333333'
-MED_TEXT = '#666666'
-LIGHT_LINE = '#D0D5DD'
-WHITE_BG = '#FFFFFF'
-
-FAMILY_COLORS = {
-    'LLaMA': SOFT_RED,
-    'Meta': SOFT_RED,
-    'Qwen 2.5': SOFT_TEAL,
-    'Qwen': SOFT_NAVY,
-    'Qwen 3': SOFT_NAVY,
-    'Phi-4': SOFT_ORANGE,
-    'Microsoft': SOFT_ORANGE,
+FAMILY_COLOR = {
+    'LLaMA 3.x': C_RED,
+    'Qwen 2.5':  C_TEAL,
+    'Qwen 3':    C_NAVY,
+    'Phi-4':     C_ORANGE,
 }
 
+# ═══════════════════════════════════════════════════════════════════════
+# RC Params — serif, publication-ready
+# ═══════════════════════════════════════════════════════════════════════
 plt.rcParams.update({
-    'font.family': 'serif',
-    'font.serif': ['Times New Roman', 'DejaVu Serif'],
-    'font.size': 13,
-    'axes.labelsize': 14,
-    'axes.titlesize': 15,
-    'axes.titleweight': 'bold',
-    'xtick.labelsize': 11,
-    'ytick.labelsize': 11,
-    'legend.fontsize': 11,
-    'legend.framealpha': 1.0,
-    'figure.dpi': 300,
-    'savefig.dpi': 300,
-    'savefig.bbox': 'tight',
-    'savefig.pad_inches': 0.1,
-    'axes.spines.top': False,
-    'axes.spines.right': False,
-    'axes.linewidth': 0.8,
-    'axes.edgecolor': LIGHT_LINE,
-    'axes.grid': True,
-    'grid.alpha': 0.4,
-    'grid.linestyle': '-',
-    'grid.linewidth': 0.5,
-    'grid.color': '#E8EDF2',
-    'figure.facecolor': WHITE_BG,
-    'axes.facecolor': WHITE_BG,
-    'xtick.major.width': 0.8,
-    'ytick.major.width': 0.8,
-    'xtick.color': MED_TEXT,
-    'ytick.color': MED_TEXT,
-    'axes.labelcolor': DARK_TEXT,
-    'text.color': DARK_TEXT,
+    'font.family':        'serif',
+    'font.serif':         ['Times New Roman', 'DejaVu Serif'],
+    'font.size':          12,
+    'axes.labelsize':     13,
+    'axes.titlesize':     14,
+    'axes.titleweight':   'bold',
+    'xtick.labelsize':    10,
+    'ytick.labelsize':    10,
+    'legend.fontsize':    10,
+    'legend.framealpha':  1.0,
+    'figure.dpi':         300,
+    'savefig.dpi':        300,
+    'savefig.bbox':       'tight',
+    'savefig.pad_inches': 0.08,
+    'axes.spines.top':    False,
+    'axes.spines.right':  False,
+    'axes.linewidth':     0.6,
+    'axes.edgecolor':     C_LGRAY,
+    'axes.grid':          True,
+    'grid.alpha':         0.35,
+    'grid.linestyle':     '-',
+    'grid.linewidth':     0.4,
+    'grid.color':         '#E0E4E8',
+    'figure.facecolor':   C_BG,
+    'axes.facecolor':     C_BG,
+    'xtick.major.width':  0.6,
+    'ytick.major.width':  0.6,
+    'xtick.color':        C_MTEXT,
+    'ytick.color':        C_MTEXT,
+    'axes.labelcolor':    C_TEXT,
+    'text.color':         C_TEXT,
 })
 
 OUT_DIR = os.path.join(os.path.dirname(__file__), 'figures')
 os.makedirs(OUT_DIR, exist_ok=True)
 
-
-# ── Data Loading ──
-
-# Map shortName to display name for figures
-DISPLAY_NAMES = {
-    'llama3.2-1b': 'LLaMA-3.2-1B',
-    'llama3.2-3b': 'LLaMA-3.2-3B',
-    'llama3.1-8b': 'LLaMA-3.1-8B',
+# ═══════════════════════════════════════════════════════════════════════
+# Display Names & Mappings
+# ═══════════════════════════════════════════════════════════════════════
+DISPLAY = {
+    'llama3.2-1b':  'LLaMA-3.2-1B',
+    'llama3.2-3b':  'LLaMA-3.2-3B',
+    'llama3.1-8b':  'LLaMA-3.1-8B',
     'qwen2.5-1.5b': 'Qwen2.5-1.5B',
-    'qwen2.5-3b': 'Qwen2.5-3B',
-    'qwen2.5-7b': 'Qwen2.5-7B',
-    'qwen3-0.6b': 'Qwen3-0.6B',
-    'qwen3-1.7b': 'Qwen3-1.7B',
-    'qwen3-4b': 'Qwen3-4B',
-    'qwen3-8b': 'Qwen3-8B',
-    'qwen3-14b': 'Qwen3-14B',
-    'phi4-14b': 'Phi-4',
-    'phi4mi-3.8b': 'Phi-4-mini',
-    'phi4r-14b': 'Phi-4-reasoning',
-    'phi4rp-14b': 'Phi-4-R-Plus',
-    'phi4mr-3.8b': 'Phi-4-mini-R',
+    'qwen2.5-3b':   'Qwen2.5-3B',
+    'qwen2.5-7b':   'Qwen2.5-7B',
+    'qwen3-0.6b':   'Qwen3-0.6B',
+    'qwen3-1.7b':   'Qwen3-1.7B',
+    'qwen3-4b':     'Qwen3-4B',
+    'qwen3-8b':     'Qwen3-8B',
+    'qwen3-14b':    'Qwen3-14B',
+    'phi4-14b':     'Phi-4',
+    'phi4mi-3.8b':  'Phi-4-mini',
+    'phi4r-14b':    'Phi-4-R',
+    'phi4rp-14b':   'Phi-4-R-Plus',
+    'phi4mr-3.8b':  'Phi-4-mini-R',
 }
 
-# Family grouping for scaling curve
-FAMILY_GROUPING = {
-    'llama3.2-1b': ('LLaMA 3.x', '1B'),
-    'llama3.2-3b': ('LLaMA 3.x', '3B'),
-    'llama3.1-8b': ('LLaMA 3.x', '8B'),
-    'qwen2.5-1.5b': ('Qwen 2.5', '1.5B'),
-    'qwen2.5-3b': ('Qwen 2.5', '3B'),
-    'qwen2.5-7b': ('Qwen 2.5', '7B'),
-    'qwen3-0.6b': ('Qwen 3', '0.6B'),
-    'qwen3-1.7b': ('Qwen 3', '1.7B'),
-    'qwen3-4b': ('Qwen 3', '4B'),
-    'qwen3-8b': ('Qwen 3', '8B'),
-    'qwen3-14b': ('Qwen 3', '14B'),
-    'phi4mi-3.8b': ('Phi-4', '3.8B'),
-    'phi4-14b': ('Phi-4', '14B'),
+FAMILY_MAP = {
+    'LLaMA 3.x': [('llama3.2-1b', '1B'), ('llama3.2-3b', '3B'), ('llama3.1-8b', '8B')],
+    'Qwen 2.5':  [('qwen2.5-1.5b', '1.5B'), ('qwen2.5-3b', '3B'), ('qwen2.5-7b', '7B')],
+    'Qwen 3':    [('qwen3-0.6b', '0.6B'), ('qwen3-1.7b', '1.7B'), ('qwen3-4b', '4B'),
+                  ('qwen3-8b', '8B'), ('qwen3-14b', '14B')],
+    'Phi-4':     [('phi4mi-3.8b', '3.8B'), ('phi4-14b', '14B')],
 }
 
-FAMILY_PLOT_COLORS = {
-    'LLaMA 3.x': SOFT_RED,
-    'Qwen 2.5': SOFT_TEAL,
-    'Qwen 3': SOFT_NAVY,
-    'Phi-4': SOFT_ORANGE,
-}
+DS_KEYS   = ['gsm8k_acc', 'gsm_plus_acc', 'math_acc', 'arc_easy_acc',
+             'arc_challenge_acc', 'hellaswag_acc', 'winogrande_acc', 'truthfulqa_acc']
+DS_LABELS = ['GSM8K', 'GSM+', 'MATH', 'ARC-E', 'ARC-C', 'HSwag', 'WGrnd', 'TQA']
 
 
-def load_model_data():
-    """Load all exported data from modelData.js.
+def _dn(key):
+    return DISPLAY.get(key, key)
 
-    Returns:
-        Tuple of (modelData, majorityVotingData, personaData, madData).
-    """
+
+# ═══════════════════════════════════════════════════════════════════════
+# Data Loader
+# ═══════════════════════════════════════════════════════════════════════
+
+def load_all_data():
     js_path = os.path.join(os.path.dirname(__file__),
                            'website', 'src', 'data', 'modelData.js')
-    with open(js_path, 'r') as f:
+    with open(js_path) as f:
         content = f.read()
 
-    def extract_array(var_name):
-        pattern = rf'export const {var_name}\s*=\s*(\[.*?\]);'
-        match = re.search(pattern, content, re.DOTALL)
-        if not match:
-            print(f'  Warning: could not find {var_name} in modelData.js')
+    def _extract(var):
+        m = re.search(rf'export const {var}\s*=\s*(\[.*?\]);', content, re.DOTALL)
+        if not m:
+            print(f'  ⚠ {var} not found')
             return []
-        return json.loads(match.group(1))
+        return json.loads(m.group(1))
 
-    return (
-        extract_array('modelData'),
-        extract_array('majorityVotingData'),
-        extract_array('personaData'),
-        extract_array('madData'),
-    )
+    return (_extract('modelData'), _extract('majorityVotingData'),
+            _extract('personaData'), _extract('madData'))
 
 
-def _get_t10_t8192(model_data):
-    """Build {shortName: {10: accuracy, 8192: accuracy}} from modelData.
-
-    Only includes models that have BOTH t10 and t8192 entries.
-    Reasoning-only models (phi4r, phi4rp, phi4mr) only have t8192.
-    """
-    pairs = {}
-    for entry in model_data:
-        key = entry['shortName']
-        tokens = entry['tokens']
-        acc = entry['accuracy']
-        pairs.setdefault(key, {})[tokens] = acc
-    return pairs
+def _t10_t8192_pairs(md):
+    buckets = {}
+    for e in md:
+        buckets.setdefault(e['shortName'], {})[e['tokens']] = e
+    return {k: v for k, v in buckets.items() if 10 in v and 8192 in v}
 
 
-# ── Figure Functions ──
+# ═══════════════════════════════════════════════════════════════════════
+# Fig 1 — Token Budget
+# ═══════════════════════════════════════════════════════════════════════
 
-def fig1_token_budget(model_data):
-    """Bar chart: 10-token vs 8192-token accuracy."""
-    pairs = _get_t10_t8192(model_data)
+def fig1_token_budget(md):
+    pairs = _t10_t8192_pairs(md)
+    keys  = sorted(pairs, key=lambda k: pairs[k][10]['accuracy'])
+    names = [_dn(k) for k in keys]
+    a10   = [pairs[k][10]['accuracy']   for k in keys]
+    a8k   = [pairs[k][8192]['accuracy'] for k in keys]
 
-    # Only include models with both token budgets
-    both = {k: v for k, v in pairs.items() if 10 in v and 8192 in v}
+    x = np.arange(len(names))
+    w = 0.36
 
-    # Sort by t10 accuracy (ascending)
-    sorted_keys = sorted(both.keys(), key=lambda k: both[k][10])
-
-    models = [DISPLAY_NAMES.get(k, k) for k in sorted_keys]
-    acc_10 = [both[k][10] for k in sorted_keys]
-    acc_8192 = [both[k][8192] for k in sorted_keys]
-
-    x = np.arange(len(models))
-    width = 0.36
-
-    fig, ax = plt.subplots(figsize=(13, 4.8))
-
-    ax.bar(x - width/2, acc_10, width, label='10 tokens (Quick)',
-           color=SOFT_NAVY, edgecolor='white', linewidth=0.6, zorder=3,
-           alpha=0.9)
-    ax.bar(x + width/2, acc_8192, width, label='8,192 tokens (Reasoned)',
-           color=LIGHT_BLUE, edgecolor='white', linewidth=0.6, zorder=3,
-           alpha=0.9)
-
-    # Subtle threshold line
-    ax.axhline(y=90, color=SOFT_RED, linestyle='--', linewidth=1.2, alpha=0.6, zorder=2)
-    ax.text(len(models) - 0.3, 90.6, r'$\tau \approx 90\%$', ha='right', va='bottom',
-            fontsize=11, color=SOFT_RED, fontstyle='italic')
+    fig, ax = plt.subplots(figsize=(13, 4.5))
+    ax.bar(x - w/2, a10, w, label='10 tokens (Quick Verdict)',
+           color=C_NAVY, edgecolor='white', linewidth=0.5, zorder=3)
+    ax.bar(x + w/2, a8k, w, label='8,192 tokens (Reasoned)',
+           color=C_LTBLUE, edgecolor='white', linewidth=0.5, zorder=3)
 
     ax.set_ylabel('Accuracy (%)')
-    y_min = max(30, min(min(acc_10), min(acc_8192)) - 10)
-    ax.set_ylim(y_min, 100)
+    ax.set_ylim(max(30, min(min(a10), min(a8k)) - 8), 100)
     ax.set_xticks(x)
-    ax.set_xticklabels(models, rotation=38, ha='right', fontsize=10)
-    ax.legend(loc='lower right', edgecolor=LIGHT_LINE, fontsize=11,
-              fancybox=False)
+    ax.set_xticklabels(names, rotation=38, ha='right', fontsize=9.5)
+    ax.legend(loc='upper left', edgecolor=C_LGRAY, fancybox=False, fontsize=10)
 
     plt.tight_layout()
-    plt.savefig(os.path.join(OUT_DIR, 'token_budget.pdf'))
+    plt.savefig(os.path.join(OUT_DIR, 'fig1_token_budget.pdf'))
     plt.close()
-    print('Saved: token_budget.pdf')
+    print('  ✓ fig1_token_budget.pdf')
 
 
-def fig2_persona_sensitivity(persona_data, model_data):
-    """Line plot: persona effect for judges with persona data."""
-    if not persona_data:
-        print('Skipped: persona_sensitivity.pdf (no persona data)')
-        return
+# ═══════════════════════════════════════════════════════════════════════
+# Fig 2 — Overthinking Delta
+# ═══════════════════════════════════════════════════════════════════════
 
-    personas = sorted(persona_data[0].get('persona_acc', {}).keys())
-    persona_labels = [p.capitalize() for p in personas]
-    x = np.arange(len(personas))
+def fig2_overthinking_delta(md):
+    pairs = _t10_t8192_pairs(md)
+    items = sorted(pairs.items(),
+                   key=lambda kv: kv[1][10]['accuracy'] - kv[1][8192]['accuracy'])
+    names  = [_dn(k) for k, _ in items]
+    deltas = [v[10]['accuracy'] - v[8192]['accuracy'] for _, v in items]
+    colors = [C_GREEN if d > 0 else C_BLUE for d in deltas]
 
-    # Build base accuracy lookup from individual t10 data
-    base_acc = {}
-    for entry in model_data:
-        if entry['tokens'] == 10:
-            base_acc[entry['shortName']] = entry['accuracy']
+    fig, ax = plt.subplots(figsize=(8, 5))
+    bars = ax.barh(range(len(names)), deltas, color=colors,
+                   edgecolor='white', linewidth=0.4, height=0.62, zorder=3)
+    ax.set_yticks(range(len(names)))
+    ax.set_yticklabels(names, fontsize=10)
+    ax.set_xlabel(r'$\Delta$ Accuracy (pp)  =  Acc$_{10}$ $-$ Acc$_{8192}$',
+                  fontsize=11)
+    ax.axvline(0, color=C_TEXT, linewidth=0.8, zorder=2)
 
-    markers = ['o', 's', '^', 'D', 'v', 'P', '*', 'X']
-    colors = [SOFT_RED, SOFT_NAVY, SOFT_TEAL, SOFT_ORANGE, SOFT_PURPLE,
-              SOFT_GREEN, SOFT_GOLD, SOFT_BLUE]
+    for i, (bar, d) in enumerate(zip(bars, deltas)):
+        offset = 0.3 if d >= 0 else -0.3
+        ha = 'left' if d >= 0 else 'right'
+        ax.text(d + offset, i, f'{d:+.1f}', va='center', ha=ha,
+                fontsize=8.5, color=C_MTEXT)
 
-    fig, ax = plt.subplots(figsize=(7.5, 5.5))
-
-    all_vals = []
-    for idx, entry in enumerate(persona_data):
-        name = DISPLAY_NAMES.get(entry['shortName'], entry['shortName'])
-        pa = entry.get('persona_acc', {})
-        data = [pa.get(p, 0) for p in personas]
-        base = base_acc.get(entry['shortName'], entry.get('accuracy', 0))
-        color = colors[idx % len(colors)]
-        marker = markers[idx % len(markers)]
-
-        ax.plot(x, data, marker=marker, color=color,
-                linewidth=2.0, markersize=7, label=name,
-                zorder=3, markeredgecolor='white', markeredgewidth=1.0, alpha=0.9)
-        ax.axhline(y=base, color=color, linestyle=':',
-                   linewidth=0.8, alpha=0.35)
-        all_vals.extend(data)
-        all_vals.append(base)
-
-    ax.set_xticks(x)
-    ax.set_xticklabels(persona_labels, fontsize=12)
-    ax.set_ylabel('Accuracy (%)')
-    y_min = max(60, min(all_vals) - 3)
-    y_max = min(100, max(all_vals) + 2)
-    ax.set_ylim(y_min, y_max)
-    ax.legend(loc='lower left', edgecolor=LIGHT_LINE, fontsize=10,
-              fancybox=False, ncol=1)
+    ax.legend(
+        handles=[mpatches.Patch(color=C_GREEN, label='Quick verdict better'),
+                 mpatches.Patch(color=C_BLUE,  label='Reasoning better')],
+        loc='upper left', edgecolor=C_LGRAY, fancybox=False, fontsize=9)
 
     plt.tight_layout()
-    plt.savefig(os.path.join(OUT_DIR, 'persona_sensitivity.pdf'))
+    plt.savefig(os.path.join(OUT_DIR, 'fig2_overthinking_delta.pdf'))
     plt.close()
-    print('Saved: persona_sensitivity.pdf')
+    print('  ✓ fig2_overthinking_delta.pdf')
 
 
-def fig3_ensemble_vs_individual(model_data, mv_data, mad_data):
-    """Clean bar chart comparing best individual, ensemble, and debate."""
-    # Best individual at t10
-    best_ind = max(
-        (e for e in model_data if e['tokens'] == 10),
-        key=lambda e: e['accuracy'],
-        default=None,
-    )
-    # Best majority voting ensemble
-    best_mv = max(mv_data, key=lambda e: e['accuracy'], default=None)
-    # Best multi-agent debate
-    best_mad = max(mad_data, key=lambda e: e['accuracy'], default=None)
+# ═══════════════════════════════════════════════════════════════════════
+# Fig 3 — Strategy Comparison
+# ═══════════════════════════════════════════════════════════════════════
 
-    categories = []
-    accuracies = []
-    colors_list = []
+def fig3_strategy_comparison(md, pd, mv, mad):
+    t10 = [e for e in md if e['tokens'] == 10]
+    best_ind = max(t10, key=lambda e: e['accuracy']) if t10 else None
+    t10_per  = [e for e in pd if e.get('tokens') == 10]
+    best_per = max(t10_per, key=lambda e: e['accuracy']) if t10_per else None
+    best_mv  = max(mv,  key=lambda e: e['accuracy']) if mv  else None
+    best_mad = max(mad, key=lambda e: e['accuracy']) if mad else None
 
+    labels, accs, clrs = [], [], []
     if best_ind:
-        name = DISPLAY_NAMES.get(best_ind['shortName'], best_ind['shortName'])
-        categories.append(f'Best Individual\n({name})')
-        accuracies.append(best_ind['accuracy'])
-        colors_list.append(SOFT_BLUE)
-
+        labels.append('Individual'); accs.append(best_ind['accuracy']); clrs.append(C_BLUE)
+    if best_per:
+        labels.append('Persona');    accs.append(best_per['accuracy']); clrs.append(C_PURPLE)
     if best_mv:
-        categories.append('Best Ensemble\n(3-model jury)')
-        accuracies.append(best_mv['accuracy'])
-        colors_list.append(SOFT_GREEN)
-
+        labels.append('Majority\nVoting'); accs.append(best_mv['accuracy']); clrs.append(C_GREEN)
     if best_mad:
-        # Extract the debate combo description
-        judges = best_mad.get('judges', [])
-        if judges:
-            debate_name = judges[0].get('name', 'Debate')
-        else:
-            debate_name = 'Debate'
-        categories.append(f'Best Debate\n({debate_name})')
-        accuracies.append(best_mad['accuracy'])
-        colors_list.append(SOFT_RED)
+        labels.append('Multi-Agent\nDebate'); accs.append(best_mad['accuracy']); clrs.append(C_ORANGE)
 
-    if not categories:
-        print('Skipped: approach_comparison.pdf (no data)')
+    if not labels:
         return
 
     fig, ax = plt.subplots(figsize=(6.5, 4.5))
-    bars = ax.bar(categories, accuracies, color=colors_list, edgecolor='white',
-                  linewidth=1.0, width=0.52, zorder=3, alpha=0.88)
+    bars = ax.bar(labels, accs, color=clrs, edgecolor='white',
+                  linewidth=0.8, width=0.55, zorder=3)
 
-    for bar, acc in zip(bars, accuracies):
-        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.08,
-                f'{acc:.2f}%', ha='center', va='bottom', fontsize=13,
-                fontweight='bold', color=DARK_TEXT)
+    for bar, acc in zip(bars, accs):
+        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.12,
+                f'{acc:.2f}%', ha='center', va='bottom', fontsize=12,
+                fontweight='bold', color=C_TEXT)
 
     ax.set_ylabel('Accuracy (%)')
-    y_min = min(accuracies) - 2
-    y_max = max(accuracies) + 1.5
-    ax.set_ylim(y_min, y_max)
+    spread = max(accs) - min(accs)
+    ax.set_ylim(min(accs) - max(2, spread), max(accs) + 1.5)
     ax.tick_params(axis='x', labelsize=11)
 
     plt.tight_layout()
-    plt.savefig(os.path.join(OUT_DIR, 'approach_comparison.pdf'))
+    plt.savefig(os.path.join(OUT_DIR, 'fig3_strategy_comparison.pdf'))
     plt.close()
-    print('Saved: approach_comparison.pdf')
+    print('  ✓ fig3_strategy_comparison.pdf')
 
 
-def fig4_overthinking_delta(model_data):
-    """Horizontal diverging bar chart for overthinking effect."""
-    pairs = _get_t10_t8192(model_data)
-    both = {k: v for k, v in pairs.items() if 10 in v and 8192 in v}
+# ═══════════════════════════════════════════════════════════════════════
+# Fig 4 — Per-Dataset Heatmap (all 8 datasets)
+# ═══════════════════════════════════════════════════════════════════════
 
-    models = []
-    deltas = []
-    for k, v in both.items():
-        models.append(DISPLAY_NAMES.get(k, k))
-        deltas.append(v[10] - v[8192])
-
-    # Sort by delta ascending
-    sorted_pairs = sorted(zip(models, deltas), key=lambda p: p[1])
-    models_s = [p[0] for p in sorted_pairs]
-    deltas_s = [p[1] for p in sorted_pairs]
-
-    colors = [SOFT_GREEN if d > 0 else SOFT_BLUE for d in deltas_s]
-
-    fig, ax = plt.subplots(figsize=(8.5, 5.5))
-    ax.barh(range(len(models_s)), deltas_s, color=colors,
-            edgecolor='white', linewidth=0.5, height=0.65, zorder=3, alpha=0.85)
-
-    ax.set_yticks(range(len(models_s)))
-    ax.set_yticklabels(models_s, fontsize=10)
-    ax.set_xlabel(r'$\Delta$ = Acc(10 tok) $-$ Acc(8,192 tok) (pp)', fontsize=12)
-    ax.axvline(x=0, color=DARK_TEXT, linewidth=0.8, zorder=2)
-
-    # Labels
-    green_patch = mpatches.Patch(color=SOFT_GREEN, alpha=0.85, label='Quick verdict wins')
-    blue_patch = mpatches.Patch(color=SOFT_BLUE, alpha=0.85, label='Reasoning helps')
-    ax.legend(handles=[green_patch, blue_patch], loc='lower right',
-              edgecolor=LIGHT_LINE, fontsize=10, fancybox=False)
-
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUT_DIR, 'overthinking_delta.pdf'))
-    plt.close()
-    print('Saved: overthinking_delta.pdf')
-
-
-def fig5_per_dataset_heatmap(model_data):
-    """Heatmap with soft blue-white-red colormap.
-
-    Shows per-dataset accuracy for top-N individual judges at t=10.
-    """
-    dataset_keys = ['gsm8k_acc', 'gsm_plus_acc', 'math_acc', 'arc_easy_acc', 'arc_challenge_acc']
-    dataset_labels = ['GSM8K', 'GSM-Plus', 'MATH', 'ARC-E', 'ARC-C']
-
-    # Top 7 individual judges at t=10 by overall accuracy
-    t10_entries = sorted(
-        [e for e in model_data if e['tokens'] == 10],
-        key=lambda e: e['accuracy'],
-        reverse=True,
-    )[:7]
-
-    if not t10_entries:
-        print('Skipped: per_dataset_heatmap.pdf (no t10 data)')
+def fig4_dataset_heatmap(md):
+    t10 = sorted([e for e in md if e['tokens'] == 10],
+                 key=lambda e: e['accuracy'], reverse=True)[:8]
+    if not t10:
         return
 
-    models = [DISPLAY_NAMES.get(e['shortName'], e['shortName']) for e in t10_entries]
-    data = np.array([
-        [e.get(dk, 0) for dk in dataset_keys]
-        for e in t10_entries
-    ])
+    names = [_dn(e['shortName']) for e in t10]
+    data  = np.array([[e.get(dk, 0) for dk in DS_KEYS] for e in t10])
 
     from matplotlib.colors import LinearSegmentedColormap
     cmap = LinearSegmentedColormap.from_list(
-        'slm', [SOFT_RED, SOFT_GOLD, '#FFFFFF', LIGHT_BLUE, SOFT_NAVY], N=256)
-
-    fig, ax = plt.subplots(figsize=(8.5, 4.5))
-    ax.grid(False)
-    vmin = max(50, data.min() - 5)
-    im = ax.imshow(data, cmap=cmap, aspect='auto', vmin=vmin, vmax=100)
-
-    ax.set_xticks(range(len(dataset_labels)))
-    ax.set_xticklabels(dataset_labels, fontsize=13)
-    ax.set_yticks(range(len(models)))
-    ax.set_yticklabels(models, fontsize=11)
-
-    for i in range(len(models)):
-        for j in range(len(dataset_labels)):
-            val = data[i, j]
-            color = 'white' if val < (vmin + 10) else DARK_TEXT
-            ax.text(j, i, f'{val:.1f}', ha='center', va='center',
-                    fontsize=10, color=color, fontweight='bold')
-
-    cbar = plt.colorbar(im, ax=ax, shrink=0.85, pad=0.02)
-    cbar.set_label('Accuracy (%)', fontsize=12)
-    cbar.ax.tick_params(labelsize=10)
-
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUT_DIR, 'per_dataset_heatmap.pdf'))
-    plt.close()
-    print('Saved: per_dataset_heatmap.pdf')
-
-
-def fig6_scaling_curve(model_data):
-    """Grouped bar chart: accuracy by model family and size (t=10 only)."""
-    # Collect t=10 entries that we have family grouping for
-    families = {}
-    for entry in model_data:
-        key = entry['shortName']
-        if entry['tokens'] != 10 or key not in FAMILY_GROUPING:
-            continue
-        fam, size = FAMILY_GROUPING[key]
-        families.setdefault(fam, []).append((size, entry['accuracy']))
-
-    # Sort within each family by parameter size (numeric)
-    def _parse_size(s):
-        return float(s.replace('B', ''))
-
-    family_order = ['LLaMA 3.x', 'Qwen 2.5', 'Qwen 3', 'Phi-4']
-    for fam in family_order:
-        if fam in families:
-            families[fam].sort(key=lambda p: _parse_size(p[0]))
+        'slm', ['#D9534F', '#F5C242', C_BG, C_LTBLUE, C_NAVY], N=256)
 
     fig, ax = plt.subplots(figsize=(10, 5))
+    ax.grid(False)
+    vmin = max(25, float(data.min()) - 5)
+    im = ax.imshow(data, cmap=cmap, aspect='auto', vmin=vmin, vmax=100)
 
-    all_labels = []
-    all_values = []
-    all_colors = []
-    x_pos = []
-    pos = 0
+    ax.set_xticks(range(len(DS_LABELS)))
+    ax.set_xticklabels(DS_LABELS, fontsize=11)
+    ax.set_yticks(range(len(names)))
+    ax.set_yticklabels(names, fontsize=10)
 
-    for fam in family_order:
-        if fam not in families:
-            continue
-        for size, acc in families[fam]:
-            all_labels.append(size)
-            all_values.append(acc)
-            all_colors.append(FAMILY_PLOT_COLORS[fam])
-            x_pos.append(pos)
-            pos += 1
-        pos += 0.6  # gap between families
+    for i in range(data.shape[0]):
+        for j in range(data.shape[1]):
+            v = data[i, j]
+            color = 'white' if v < (vmin + 15) else C_TEXT
+            ax.text(j, i, f'{v:.1f}', ha='center', va='center',
+                    fontsize=9, color=color, fontweight='bold')
 
-    if not all_values:
-        print('Skipped: scaling_curve.pdf (no data)')
-        return
-
-    bars = ax.bar(x_pos, all_values, color=all_colors, width=0.75,
-                  edgecolor='white', linewidth=0.8, alpha=0.88, zorder=3)
-
-    # Add value labels on top bars > 90
-    for xp, val in zip(x_pos, all_values):
-        if val > 85:
-            ax.text(xp, val + 0.5, f'{val:.1f}', ha='center', va='bottom',
-                    fontsize=8, color=MED_TEXT, fontweight='bold')
-
-    ax.set_xticks(x_pos)
-    ax.set_xticklabels(all_labels, fontsize=10, rotation=0)
-    ax.set_ylabel('Accuracy at 10 Tokens (%)')
-    y_min = max(30, min(all_values) - 10)
-    ax.set_ylim(y_min, 100)
-
-    # Threshold
-    ax.axhline(y=85, color=SOFT_RED, linestyle='--', linewidth=1.0, alpha=0.5)
-    ax.text(max(x_pos) + 0.5, 85.5, r'$\tau$', fontsize=12, color=SOFT_RED)
-
-    # Family labels below
-    idx = 0
-    for fam in family_order:
-        if fam not in families:
-            continue
-        n = len(families[fam])
-        center = (x_pos[idx] + x_pos[idx + n - 1]) / 2
-        ax.text(center, y_min - 2, fam, ha='center', va='top', fontsize=11,
-                fontweight='bold', color=FAMILY_PLOT_COLORS[fam])
-        idx += n
-
-    # Legend
-    handles = [mpatches.Patch(color=FAMILY_PLOT_COLORS[f], alpha=0.88, label=f)
-               for f in family_order if f in families]
-    ax.legend(handles=handles, loc='upper left', edgecolor=LIGHT_LINE,
-              fontsize=10, fancybox=False, ncol=2)
+    cbar = plt.colorbar(im, ax=ax, shrink=0.85, pad=0.02)
+    cbar.set_label('Accuracy (%)', fontsize=11)
+    cbar.ax.tick_params(labelsize=9)
 
     plt.tight_layout()
-    plt.savefig(os.path.join(OUT_DIR, 'scaling_curve.pdf'))
+    plt.savefig(os.path.join(OUT_DIR, 'fig4_dataset_heatmap.pdf'))
     plt.close()
-    print('Saved: scaling_curve.pdf')
+    print('  ✓ fig4_dataset_heatmap.pdf')
 
+
+# ═══════════════════════════════════════════════════════════════════════
+# Fig 5 — Persona Sensitivity (t10 only)
+# ═══════════════════════════════════════════════════════════════════════
+
+def fig5_persona_sensitivity(pd, md):
+    t10_p = [e for e in pd if e.get('tokens') == 10]
+    if not t10_p:
+        return
+
+    personas = sorted(t10_p[0].get('persona_acc', {}).keys())
+    plabels  = [p.capitalize() for p in personas]
+    x = np.arange(len(personas))
+
+    base_acc = {e['shortName']: e['accuracy']
+                for e in md if e['tokens'] == 10}
+
+    markers = ['o', 's', '^', 'D', 'v']
+    colors  = [C_NAVY, C_TEAL, C_ORANGE, C_RED, C_PURPLE]
+
+    fig, ax = plt.subplots(figsize=(7.5, 5))
+    all_vals = []
+
+    for idx, entry in enumerate(t10_p):
+        sn   = entry['shortName']
+        pa   = entry.get('persona_acc', {})
+        vals = [pa.get(p, 0) for p in personas]
+        base = base_acc.get(sn, entry.get('accuracy', 0))
+        c, m = colors[idx % len(colors)], markers[idx % len(markers)]
+
+        ax.plot(x, vals, marker=m, color=c, linewidth=2.0, markersize=7,
+                label=_dn(sn), zorder=3,
+                markeredgecolor='white', markeredgewidth=0.8)
+        ax.axhline(base, color=c, linestyle=':', linewidth=0.7, alpha=0.4)
+        all_vals.extend(vals + [base])
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(plabels, fontsize=11)
+    ax.set_ylabel('Accuracy (%)')
+    ax.set_ylim(min(all_vals) - 1.5, max(all_vals) + 1.5)
+    ax.legend(loc='lower left', edgecolor=C_LGRAY, fancybox=False, fontsize=9)
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(OUT_DIR, 'fig5_persona_sensitivity.pdf'))
+    plt.close()
+    print('  ✓ fig5_persona_sensitivity.pdf')
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Fig 6 — Scaling Curve (grouped bar by family)
+# ═══════════════════════════════════════════════════════════════════════
+
+def fig6_scaling_curve(md):
+    t10_acc = {e['shortName']: e['accuracy']
+               for e in md if e['tokens'] == 10}
+
+    fig, ax = plt.subplots(figsize=(10, 4.8))
+
+    tick_labels = []   # "FamilyName\nSize" compound labels
+    values      = []
+    bar_colors  = []
+    x_pos       = []
+    pos = 0
+
+    for fam, members in FAMILY_MAP.items():
+        for sn, size in members:
+            acc = t10_acc.get(sn)
+            if acc is None:
+                continue
+            tick_labels.append(f'{fam}\n{size}')
+            values.append(acc)
+            bar_colors.append(FAMILY_COLOR[fam])
+            x_pos.append(pos)
+            pos += 1
+        pos += 0.7  # gap between families
+
+    if not values:
+        return
+
+    ax.bar(x_pos, values, color=bar_colors, width=0.72,
+           edgecolor='white', linewidth=0.6, zorder=3)
+
+    for xp, v in zip(x_pos, values):
+        ax.text(xp, v + 0.5, f'{v:.1f}', ha='center', va='bottom',
+                fontsize=7.5, color=C_MTEXT, fontweight='bold')
+
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(tick_labels, fontsize=8.5, linespacing=1.2)
+    ax.set_ylabel('Accuracy at t=10 (%)')
+    ax.set_ylim(max(30, min(values) - 8), max(values) + 4)
+
+    handles = [mpatches.Patch(color=FAMILY_COLOR[f], label=f) for f in FAMILY_MAP]
+    ax.legend(handles=handles, loc='lower right', edgecolor=C_LGRAY,
+              fancybox=False, fontsize=9, ncol=2)
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(OUT_DIR, 'fig6_scaling_curve.pdf'))
+    plt.close()
+    print('  ✓ fig6_scaling_curve.pdf')
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Fig 7 — Instruction Following Rate (t10 vs t8192)
+# ═══════════════════════════════════════════════════════════════════════
+
+def fig7_instruction_following(md):
+    """Grouped bar: IFR at t10 vs t8192, sorted by t10 IFR.
+
+    Highlights that smaller models and longer outputs degrade format compliance.
+    """
+    pairs = _t10_t8192_pairs(md)
+    # Only include models where at least one budget has IFR < 100
+    interesting = {k: v for k, v in pairs.items()
+                   if v[10]['ifr'] < 99.95 or v[8192]['ifr'] < 99.95}
+
+    if not interesting:
+        print('  ⚠ Skipped fig8 (all IFR ≈ 100%)')
+        return
+
+    keys  = sorted(interesting, key=lambda k: interesting[k][10]['ifr'])
+    names = [_dn(k) for k in keys]
+    ifr10 = [interesting[k][10]['ifr']   for k in keys]
+    ifr8k = [interesting[k][8192]['ifr'] for k in keys]
+
+    x = np.arange(len(names))
+    w = 0.36
+
+    fig, ax = plt.subplots(figsize=(9, 4.5))
+    ax.bar(x - w/2, ifr10, w, label='t = 10',
+           color=C_NAVY, edgecolor='white', linewidth=0.5, zorder=3)
+    ax.bar(x + w/2, ifr8k, w, label='t = 8,192',
+           color=C_LTBLUE, edgecolor='white', linewidth=0.5, zorder=3)
+
+    # 100% reference line
+    ax.axhline(100, color=C_LGRAY, linestyle='--', linewidth=0.8, zorder=1)
+
+    ax.set_ylabel('Instruction Following Rate (%)')
+    ax.set_ylim(max(90, min(min(ifr10), min(ifr8k)) - 2), 101)
+    ax.set_xticks(x)
+    ax.set_xticklabels(names, rotation=25, ha='right', fontsize=10)
+    ax.legend(loc='lower right', edgecolor=C_LGRAY, fancybox=False, fontsize=10)
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(OUT_DIR, 'fig7_instruction_following.pdf'))
+    plt.close()
+    print('  ✓ fig7_instruction_following.pdf')
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Main
+# ═══════════════════════════════════════════════════════════════════════
 
 if __name__ == '__main__':
-    print('Generating SLMJury figures...')
-    print(f'Output directory: {OUT_DIR}')
-    print()
+    print('SLMJury — Generating publication figures')
+    print(f'Output: {OUT_DIR}\n')
 
-    model_data, mv_data, persona_data, mad_data = load_model_data()
-    print(f'Loaded: {len(model_data)} individual, {len(mv_data)} MV, '
-          f'{len(persona_data)} persona, {len(mad_data)} MAD entries')
-    print()
+    md, mv, pd, mad = load_all_data()
+    print(f'Data: {len(md)} individual · {len(mv)} MV · '
+          f'{len(pd)} persona · {len(mad)} MAD\n')
 
-    fig1_token_budget(model_data)
-    fig2_persona_sensitivity(persona_data, model_data)
-    fig3_ensemble_vs_individual(model_data, mv_data, mad_data)
-    fig4_overthinking_delta(model_data)
-    fig5_per_dataset_heatmap(model_data)
-    fig6_scaling_curve(model_data)
-    print('\nAll figures generated successfully.')
+    fig1_token_budget(md)
+    fig2_overthinking_delta(md)
+    fig3_strategy_comparison(md, pd, mv, mad)
+    fig4_dataset_heatmap(md)
+    fig5_persona_sensitivity(pd, md)
+    fig6_scaling_curve(md)
+    fig7_instruction_following(md)
+
+    print('\n✓ All figures generated.')
