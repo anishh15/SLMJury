@@ -5,7 +5,7 @@
 <div align="center">
 
 <!-- Badges -->
-<a href="#-installation"><img src="https://img.shields.io/badge/📦_PyPI-Coming_Soon-lightgrey?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI"/></a>
+<a href="https://test.pypi.org/project/slmjury/"><img src="https://img.shields.io/badge/📦_TestPyPI-0.1.0-blue?style=for-the-badge&logo=pypi&logoColor=white" alt="TestPyPI"/></a>
 <a href="#-citation"><img src="https://img.shields.io/badge/📄_Paper-Coming_Soon-lightgrey?style=for-the-badge&logo=arxiv" alt="Paper"/></a>
 <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python"/></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-green.svg?style=for-the-badge" alt="License"/></a>
