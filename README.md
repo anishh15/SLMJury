@@ -7,7 +7,7 @@
 <!-- Badges -->
 <a href="#-installation"><img src="https://img.shields.io/badge/📦_PyPI-Coming_Soon-lightgrey?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI"/></a>
 <a href="#-citation"><img src="https://img.shields.io/badge/📄_Paper-Coming_Soon-lightgrey?style=for-the-badge&logo=arxiv" alt="Paper"/></a>
-<a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.9+-blue.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python"/></a>
+<a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python"/></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-green.svg?style=for-the-badge" alt="License"/></a>
 <a href="https://github.com/anishh15/SLMJury/stargazers"><img src="https://img.shields.io/github/stars/anishh15/SLMJury?style=for-the-badge&logo=github&color=yellow" alt="Stars"/></a>
 

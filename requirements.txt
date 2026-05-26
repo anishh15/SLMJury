@@ -10,3 +10,6 @@ tqdm>=4.66.0
 
 # GPU inference (optional - install separately)
 # vllm>=0.4.0
+
+# Together API for oracle scoring (optional - install separately)
+# together>=1.0.0
