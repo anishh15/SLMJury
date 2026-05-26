@@ -294,9 +294,17 @@ export default function Documentation() {
             </div>
           </Section>
 
-          {/* ── Installation ── */}
           <Section active={activeSection === 'installation'} id="installation" icon={Package} title="Installation">
-            <SubSection title="From Source (Recommended)">
+            <SubSection title="From PyPI">
+              <CodeBlock code={`pip install slmjury
+
+# Optional extras
+pip install slmjury[vllm]       # GPU inference with vLLM
+pip install slmjury[together]   # Together API for oracle scoring
+pip install slmjury[full]       # Everything`} />
+            </SubSection>
+
+            <SubSection title="From Source (Development)">
               <CodeBlock code={`git clone https://github.com/anishh15/SLMJury.git
 cd SLMJury
 pip install -e .`} />
@@ -304,7 +312,7 @@ pip install -e .`} />
 
             <SubSection title="Requirements">
               <ul className="list-disc list-inside text-gray-500 space-y-1 text-xs">
-                <li>Python 3.9+</li>
+                <li>Python 3.10+</li>
                 <li>PyTorch 2.0+ with CUDA support</li>
                 <li>vLLM (for running model inference)</li>
                 <li>Transformers &amp; Tokenizers</li>

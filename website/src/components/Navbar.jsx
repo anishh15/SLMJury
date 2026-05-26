@@ -114,9 +114,9 @@ export default function Navbar() {
               <Github className="w-4 h-4" />
               <span>GitHub</span>
             </a>
-            <a href="#" className={extLinkClass}>
+            <a href="https://pypi.org/project/slmjury/" target="_blank" rel="noopener noreferrer" className={extLinkClass}>
               <Package className="w-4 h-4" />
-              <span>PyPI <span className="text-[10px] opacity-60">(Coming Soon)</span></span>
+              <span>PyPI</span>
             </a>
 
             <div className={`w-px h-6 mx-2 ${isDark ? 'bg-bb-dark-50/20' : 'bg-bb-light-300'}`} />
@@ -185,8 +185,8 @@ export default function Navbar() {
               <a href="https://github.com/anishh15/SLMJury" target="_blank" rel="noopener noreferrer" className={extLinkClass}>
                 <Github className="w-4 h-4" /> GitHub
               </a>
-              <a href="#" className={extLinkClass}>
-                <Package className="w-4 h-4" /> PyPI (Coming Soon)
+              <a href="https://pypi.org/project/slmjury/" target="_blank" rel="noopener noreferrer" className={extLinkClass}>
+                <Package className="w-4 h-4" /> PyPI
               </a>
             </div>
           </div>

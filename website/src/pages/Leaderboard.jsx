@@ -976,7 +976,6 @@ export default function Leaderboard() {
                     <span style={{ color: isDark ? '#60a5fa' : '#2563eb' }}>install</span>
                     {' '}
                     <span style={{ color: isDark ? '#38bdf8' : '#0284c7' }}>slmjury</span>
-                    <span className={`ml-2 text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}># coming soon</span>
                     <span className={`inline-block w-[8px] h-[16px] ml-0.5 align-middle rounded-[1px] ${isDark ? 'bg-bb-accent' : 'bg-bb-accent-dark'}`} style={{ animation: 'blink 1s step-end infinite' }} />
                   </code>
                 </div>
