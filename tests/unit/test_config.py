@@ -53,7 +53,7 @@ class TestLoadModelsConfig:
         config = load_models_config()
         qwen = config["judge_models"]["qwen2.5-7b"]
         assert qwen["model"] == "Qwen/Qwen2.5-7B-Instruct"
-        assert qwen["tensor_parallel_size"] == 4
+        assert qwen["tensor_parallel_size"] == 2
 
     def test_thinking_models_flagged(self):
         config = load_models_config()
@@ -70,12 +70,14 @@ class TestLoadModelsConfig:
         assert "oracle_models" in config
         assert len(config["oracle_models"]) == 2
 
-    def test_oracle_models_are_vllm_based(self):
+    def test_oracle_models_are_together_based(self):
         config = load_models_config()
         for key, oracle in config["oracle_models"].items():
             assert "model" in oracle, f"{key} missing 'model' field"
-            assert "tensor_parallel_size" in oracle, f"{key} missing 'tensor_parallel_size'"
-            assert "gpu_memory_utilization" in oracle, f"{key} missing 'gpu_memory_utilization'"
+            assert oracle.get("provider") == "together", (
+                f"{key} should use 'together' provider"
+            )
+            assert "api_key_env" in oracle, f"{key} missing 'api_key_env'"
 
     def test_oracle_model_ids(self):
         config = load_models_config()

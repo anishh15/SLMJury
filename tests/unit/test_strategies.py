@@ -74,8 +74,8 @@ class TestGetEnsembleJudges:
 
     def test_has_expected_models(self):
         judges = get_ensemble_judges()
-        assert "qwen3-4b" in judges
-        assert "phi4mi-3.8b" in judges
+        assert "phi4-14b" in judges
+        assert "qwen3-14b" in judges
 
 
 # --- Persona definitions ---

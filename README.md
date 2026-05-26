@@ -214,7 +214,7 @@ judge.cleanup()
 | Dataset | Type | Turns | Size | Oracle |
 |---------|------|-------|------|--------|
 | **SummEval** | Summarization | — | 1,600 pairs | Human annotations |
-| **MT-Bench** | Multi-turn chat | 2 | 80 questions | GPT-OSS-120B, Qwen3.5-397B (vLLM) |
+| **MT-Bench** | Multi-turn chat | 2 | 80 questions | GPT-OSS-120B, Qwen3.5-397B (Together API) |
 
 ---
 

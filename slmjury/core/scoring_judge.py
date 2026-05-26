@@ -42,7 +42,7 @@ PROMPT_SUMMEVAL = (
 
 # --- MT-Bench Prompt (2-turn holistic) ---
 # NOTE: This prompt is shared identically with scripts/run_mtbench_oracle.py
-# to ensure fair SLM-LLM correlation measurement.
+# (Together API) to ensure fair SLM-LLM correlation measurement.
 
 PROMPT_MTBENCH = (
     "Rate the overall quality of the assistant's responses in the following "
