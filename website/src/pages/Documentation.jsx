@@ -322,7 +322,7 @@ pip install -e .`} />
 
             <SubSection title="Verify Installation">
               <CodeBlock code={`# Verify all imports work
-python -c "from slmjury import load_models_config, JudgeModel; print('OK')"
+python -c "from slmjury import load_models_config; print('OK')"
 
 # Check available judge models
 python -c "from slmjury.configs import load_models_config; print(list(load_models_config()['judge_models'].keys()))"`} />
@@ -361,10 +361,10 @@ judge = JudgeModel("qwen3-4b", output_dir="results/judgements")
 
 # Evaluate student solutions
 results = judge.evaluate_batch(student_results, max_tokens=10)
-judge.save_results(results, student_model="phi4-14b", dataset="gsm8k", max_tokens=10)
+judge.save_results(results, "llama3.1-8b", "gsm8k", max_tokens=10)
 
 # Compute metrics
-evaluator = JudgeEvaluator("qwen3-4b", "phi4-14b", "gsm8k", 10, results)
+evaluator = JudgeEvaluator("qwen3-4b", "llama3.1-8b", "gsm8k", 10, results)
 summary = evaluator.evaluate()
 print(f"Accuracy: {evaluator.accuracy:.2%}, IFR: {evaluator.ifr:.2%}")`} />
             </SubSection>
@@ -444,7 +444,7 @@ results = judge.evaluate_batch(
 )
 
 # Save results to disk
-judge.save_results(results, "phi4-14b", "gsm8k", max_tokens=10)
+judge.save_results(results, "llama3.1-8b", "gsm8k", max_tokens=10)
 
 # Cleanup GPU memory
 judge.cleanup()`} />
@@ -456,7 +456,7 @@ judge.cleanup()`} />
                   <CodeBlock language="python" code={`from slmjury.core.solver import StudentSolver
 from slmjury.data import load_dataset
 
-solver = StudentSolver("qwen3-4b", output_dir="results/solutions")
+solver = StudentSolver("llama3.1-8b", output_dir="results/student_solutions")
 problems = load_dataset("gsm8k")
 results = solver.solve_batch(problems, "gsm8k", num_samples=100)
 solver.save_results(results, "gsm8k")
@@ -469,10 +469,10 @@ solver.cleanup()`} />
                   <CodeBlock language="python" code={`from slmjury.core.evaluator import JudgeEvaluator, generate_judge_summary
 
 evaluator = JudgeEvaluator(
-    judge="qwen3-4b",
-    student="phi4-14b",
+    judge_model="qwen3-4b",
+    student_model="llama3.1-8b",
     dataset="gsm8k",
-    tokens=10,
+    max_tokens=10,
     judgements=results  # list of judgement dicts
 )
 summary = evaluator.evaluate()
@@ -486,18 +486,27 @@ print(f"Instruction Following Rate: {evaluator.ifr:.2%}")`} />
               <CodeBlock language="python" code={`# Persona Effect
 from slmjury.strategies.persona import run_persona_evaluation, get_personas
 personas = get_personas()  # dict of 6 persona prompts
-run_persona_evaluation("qwen3-4b", student_results, max_tokens=10)
+run_persona_evaluation(
+    judge_model_key="qwen3-4b",
+    student_results=student_results,
+    student_model="qwen2.5-32b",
+    dataset="gsm8k",
+    max_tokens=10,
+    persona_name="strict",
+    persona_prompt=personas["strict"],
+)
 
 # Majority Voting Ensemble
-from slmjury.strategies.ensemble import run_majority_voting
-run_majority_voting(judge_keys=["qwen3-4b", "phi4mi-3.8b", "qwen2.5-3b"],
-                    student_results=student_results, max_tokens=10)
+from slmjury.strategies.ensemble import majority_vote, generate_all_ensembles
+verdict = majority_vote(["Correct", "Incorrect", "Correct"])  # → "Correct"
+generate_all_ensembles(judgements_dir="results/judgements",
+                       output_dir="results/majority_voting")
 
 # Multi-Agent Debate
 from slmjury.strategies.debate import run_debate
-run_debate(models=["qwen3-4b", "phi4mi-3.8b", "qwen2.5-3b"],
-           temperatures=[0.0, 0.0, 0.0],
-           student_results=student_results, dataset="gsm8k")`} />
+run_debate(combo_models=["qwen3-4b", "phi4mi-3.8b", "qwen2.5-3b"],
+           combo_temps=[0.0, 0.0, 0.0],
+           student_results=student_results, dataset_name="gsm8k")`} />
             </SubSection>
           </Section>
 
@@ -625,17 +634,15 @@ python scripts/run_judge.py --judge phi4mi-3.8b --max-tokens 10`} />
               <strong className={isDark ? 'text-gray-200' : 'text-gray-800'}>C(5,3) = 10 combinations</strong> of the top 5 individual judges. Each problem is evaluated by 3 judge models and the majority verdict wins. This demonstrates that ensembles of small judges can exceed any individual judge's accuracy.
             </p>
             <SubSection title="Running Majority Voting">
-              <CodeBlock language="python" code={`from slmjury.strategies.ensemble import run_majority_voting, majority_vote
+              <CodeBlock language="python" code={`from slmjury.strategies.ensemble import majority_vote, generate_all_ensembles
 
-# Run a 3-judge ensemble
-run_majority_voting(
-    judge_keys=["qwen3-4b", "phi4mi-3.8b", "qwen2.5-3b"],
-    student_results=student_results,
-    max_tokens=10,
+# Generate all C(5,3)=10 ensemble combinations from pre-computed judgements
+generate_all_ensembles(
+    judgements_dir="results/judgements",
     output_dir="results/majority_voting"
 )
 
-# Or apply majority vote to existing judgements
+# Or apply majority vote to individual verdicts
 verdict = majority_vote(["Correct", "Incorrect", "Correct"])  # → "Correct"`} />
             </SubSection>
           </Section>

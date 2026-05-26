@@ -132,12 +132,15 @@ summary = evaluator.evaluate()
 <summary><b>🧩 Advanced: Multi-Agent Strategies</b></summary>
 
 ```python
-# Majority voting ensemble
-from slmjury.strategies.ensemble import run_majority_voting
-run_majority_voting(
-    judge_keys=["qwen3-4b", "phi4mi-3.8b", "qwen2.5-3b"],
-    student_results=results,
-    max_tokens=10,
+# Majority voting on individual verdicts
+from slmjury.strategies.ensemble import majority_vote
+verdict = majority_vote(["Correct", "Incorrect", "Correct"])  # → "Correct"
+
+# Generate all C(5,3)=10 ensemble combinations from pre-computed judgements
+from slmjury.strategies.ensemble import generate_all_ensembles
+generate_all_ensembles(
+    judgements_dir="results/judgements",
+    output_dir="results/majority_voting",
 )
 
 # Multi-agent debate (3 judges, RCR prompting)
@@ -149,9 +152,18 @@ run_debate(
     dataset_name="gsm8k",
 )
 
-# Persona effects (6 system prompts × all judges)
-from slmjury.strategies.persona import run_persona_evaluation
-run_persona_evaluation("qwen3-4b", results, max_tokens=10)
+# Persona effects
+from slmjury.strategies.persona import run_persona_evaluation, get_personas
+personas = get_personas()
+run_persona_evaluation(
+    judge_model_key="qwen3-4b",
+    student_results=results,
+    student_model="qwen2.5-32b",
+    dataset="gsm8k",
+    max_tokens=10,
+    persona_name="strict",
+    persona_prompt=personas["strict"],
+)
 ```
 
 </details>
@@ -246,7 +258,7 @@ SLMJury/
 ├── tests/                    # Unit & integration tests (pytest)
 ├── website/                  # React leaderboard (Vite + Tailwind)
 ├── assets/                   # SVG banner and logo
-├── pyproject.toml            # Package config (pip install -e .)
+├── pyproject.toml            # Package config (pip install slmjury)
 └── README.md
 ```
 
