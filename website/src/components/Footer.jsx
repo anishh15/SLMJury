@@ -45,9 +45,9 @@ export default function Footer() {
               }`}>Links</h4>
             <ul className="space-y-3 text-sm">
               <li>
-                <a href="#" className={linkClass}>
+                <a href="https://arxiv.org/abs/2606.07810" target="_blank" rel="noopener noreferrer" className={linkClass}>
                   <FileText className="w-3.5 h-3.5" />
-                  arXiv Paper (Coming Soon)
+                  arXiv Paper
                 </a>
               </li>
               <li>

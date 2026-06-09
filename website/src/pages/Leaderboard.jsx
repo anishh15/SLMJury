@@ -921,8 +921,8 @@ export default function Leaderboard() {
 
           <AnimateIn delay={450} direction="up">
             <div className="flex flex-wrap items-center justify-center gap-2 text-xs">
-              <a href="#" className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono transition-all hover:scale-105 ${isDark ? 'bg-bb-dark-300/60 text-gray-400 border border-bb-dark-50/20 hover:text-gray-300' : 'bg-bb-light-200 text-gray-500 border border-bb-light-300 hover:text-gray-700'}`}>
-                arXiv (Coming Soon) <ArrowUpRight className="w-3 h-3" />
+              <a href="https://arxiv.org/abs/2606.07810" target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono transition-all hover:scale-105 ${isDark ? 'bg-bb-dark-300/60 text-gray-400 border border-bb-dark-50/20 hover:text-gray-300' : 'bg-bb-light-200 text-gray-500 border border-bb-light-300 hover:text-gray-700'}`}>
+                arXiv <ArrowUpRight className="w-3 h-3" />
               </a>
               <a href={projectInfo.github} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono transition-all hover:scale-105 ${isDark ? 'bg-bb-dark-300/60 text-gray-400 border border-bb-dark-50/20 hover:text-gray-300' : 'bg-bb-light-200 text-gray-500 border border-bb-light-300 hover:text-gray-700'}`}>
                 GitHub <ArrowUpRight className="w-3 h-3" />

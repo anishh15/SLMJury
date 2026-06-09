@@ -106,9 +106,9 @@ export default function Navbar() {
 
             <div className={`w-px h-6 mx-2 ${isDark ? 'bg-bb-dark-50/20' : 'bg-bb-light-300'}`} />
 
-            <a href="#" className={extLinkClass}>
+            <a href="https://arxiv.org/abs/2606.07810" target="_blank" rel="noopener noreferrer" className={extLinkClass}>
               <FileText className="w-4 h-4" />
-              <span>arXiv <span className="text-[10px] opacity-60">(Coming Soon)</span></span>
+              <span>arXiv</span>
             </a>
             <a href="https://github.com/anishh15/SLMJury" target="_blank" rel="noopener noreferrer" className={extLinkClass}>
               <Github className="w-4 h-4" />
@@ -179,8 +179,8 @@ export default function Navbar() {
                 <span>Documentation</span>
               </Link>
               <div className={`h-px my-2 ${isDark ? 'bg-bb-dark-50/20' : 'bg-bb-light-300/50'}`} />
-              <a href="#" className={extLinkClass}>
-                <FileText className="w-4 h-4" /> arXiv Paper (Coming Soon)
+              <a href="https://arxiv.org/abs/2606.07810" target="_blank" rel="noopener noreferrer" className={extLinkClass}>
+                <FileText className="w-4 h-4" /> arXiv Paper
               </a>
               <a href="https://github.com/anishh15/SLMJury" target="_blank" rel="noopener noreferrer" className={extLinkClass}>
                 <Github className="w-4 h-4" /> GitHub

@@ -6,7 +6,7 @@
 
 <!-- Badges -->
 <a href="https://pypi.org/project/slmjury/"><img src="https://img.shields.io/pypi/v/slmjury?style=for-the-badge&logo=pypi&logoColor=white&label=PyPI" alt="PyPI"/></a>
-<a href="#-citation"><img src="https://img.shields.io/badge/📄_Paper-Coming_Soon-lightgrey?style=for-the-badge&logo=arxiv" alt="Paper"/></a>
+<a href="https://arxiv.org/abs/2606.07810"><img src="https://img.shields.io/badge/📄_Paper-ArXiv%3A2606.07810-red?style=for-the-badge&logo=arxiv" alt="Paper"/></a>
 <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python"/></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-green.svg?style=for-the-badge" alt="License"/></a>
 <a href="https://github.com/anishh15/SLMJury/stargazers"><img src="https://img.shields.io/github/stars/anishh15/SLMJury?style=for-the-badge&logo=github&color=yellow" alt="Stars"/></a>
@@ -15,15 +15,25 @@
 
 **🧑‍⚖️ 16 SLM Judges &bull; 📊 10 Datasets &bull; 🗳️ 3 Advanced Strategies &bull; 🎭 6 Persona Prompts**
 
-[**🏆 Leaderboard**](https://anishh15.github.io/SLMJury/) | [**🚀 Get Started**](#-installation)
+[**🏆 Leaderboard**](https://anishh15.github.io/SLMJury/) | [**📖 Read Paper**](https://arxiv.org/abs/2606.07810) | [**🚀 Get Started**](#-installation)
 
 </div>
 
 ---
 
+## 📢 Latest News
+
+| Date | Update |
+|------|--------|
+| **Jun 2026** | Paper submitted: [arXiv:2606.07810](https://arxiv.org/abs/2606.07810) |
+| **May 2026** | Interactive leaderboard website launched: [anishh15.github.io/SLMJury](https://anishh15.github.io/SLMJury/) |
+| **May 2026** | v0.1.0 released on [PyPI](https://pypi.org/project/slmjury/) -- first public release |
+
+---
+
 ## 💡 What is SLMJury?
 
-SLMJury is a comprehensive framework that investigates whether **Small Language Models (0.6B–14B parameters)** can serve as reliable judges across both **closed-ended** (accuracy-based) and **open-ended** (correlation-based) evaluation paradigms. The project explores six evaluation modes: individual judging, persona-based evaluation, majority-vote ensembles, multi-agent debate, human agreement scoring (SummEval), and LLM agreement scoring (MT-Bench).
+SLMJury is a comprehensive framework that investigates whether **Small Language Models (0.6B-14B parameters)** can serve as reliable judges across both **closed-ended** (accuracy-based) and **open-ended** (correlation-based) evaluation paradigms. The project explores six evaluation modes: individual judging, persona-based evaluation, majority-vote ensembles, multi-agent debate, human agreement scoring (SummEval), and LLM agreement scoring (MT-Bench).
 
 <div align="center">
 <a href="https://anishh15.github.io/SLMJury/">
@@ -210,10 +220,10 @@ judge.cleanup()
 </tr>
 </thead>
 <tbody>
-<tr><td><b>Qwen 2.5</b></td><td>1.5B, 3B, 7B</td><td align="center">1.5B – 7B</td><td align="center">—</td></tr>
-<tr><td><b>Qwen 3</b></td><td>0.6B, 1.7B, 4B, 8B, 14B</td><td align="center">0.6B – 14B</td><td align="center">✅</td></tr>
-<tr><td><b>Llama 3.x</b></td><td>3.2-1B, 3.2-3B, 3.1-8B</td><td align="center">1B – 8B</td><td align="center">—</td></tr>
-<tr><td><b>Phi-4</b></td><td>14B, Reasoning, R-Plus, Mini, Mini-Reasoning</td><td align="center">3.8B – 14B</td><td align="center">✅*</td></tr>
+<tr><td><b>Qwen 2.5</b></td><td>1.5B, 3B, 7B</td><td align="center">1.5B - 7B</td><td align="center">-</td></tr>
+<tr><td><b>Qwen 3</b></td><td>0.6B, 1.7B, 4B, 8B, 14B</td><td align="center">0.6B - 14B</td><td align="center">✅</td></tr>
+<tr><td><b>Llama 3.x</b></td><td>3.2-1B, 3.2-3B, 3.1-8B</td><td align="center">1B - 8B</td><td align="center">-</td></tr>
+<tr><td><b>Phi-4</b></td><td>14B, Reasoning, R-Plus, Mini, Mini-Reasoning</td><td align="center">3.8B - 14B</td><td align="center">✅*</td></tr>
 </tbody>
 </table>
 
@@ -234,11 +244,11 @@ judge.cleanup()
 | **WinoGrande** | Multiple Choice | General | 1,267 |
 | **TruthfulQA** | Multiple Choice | General | 684 |
 
-**Open-ended** (scoring: 1–5):
+**Open-ended** (scoring: 1-5):
 
 | Dataset | Type | Turns | Size | Oracle |
 |---------|------|-------|------|--------|
-| **SummEval** | Summarization | — | 1,600 pairs | Human annotations |
+| **SummEval** | Summarization | - | 1,600 pairs | Human annotations |
 | **MT-Bench** | Multi-turn chat | 2 | 80 questions | GPT-OSS-120B, Qwen3.5-397B (Together API) |
 
 ---
@@ -264,7 +274,31 @@ SLMJury/
 
 ---
 
-## 🏆 Leaderboard
+## 📊 Results
+
+### 🏆 Leaderboard (Top Judges - Closed-Ended)
+
+<table>
+<thead>
+<tr>
+<th align="center">🏅 Rank</th>
+<th align="left">🤖 Judge Model</th>
+<th align="center">Params</th>
+<th align="center">Max Tokens</th>
+<th align="center">📊 Accuracy</th>
+<th align="center">🎯 IFR</th>
+</tr>
+</thead>
+<tbody>
+<tr><td align="center">🥇</td><td><strong>Phi-4</strong></td><td align="center">14B</td><td align="center">10</td><td align="center"><strong>89.55%</strong></td><td align="center">99.98%</td></tr>
+<tr><td align="center">🥈</td><td><strong>Qwen3-14B</strong></td><td align="center">14B</td><td align="center">10</td><td align="center"><strong>89.51%</strong></td><td align="center">100.0%</td></tr>
+<tr><td align="center">🥉</td><td><strong>Qwen3-8B</strong></td><td align="center">8B</td><td align="center">10</td><td align="center"><strong>88.96%</strong></td><td align="center">100.0%</td></tr>
+<tr><td align="center">4</td><td><strong>Phi-4-Reasoning-Plus</strong></td><td align="center">14B</td><td align="center">8192</td><td align="center"><strong>88.75%</strong></td><td align="center">100.0%</td></tr>
+<tr><td align="center">5</td><td><strong>Phi-4-Reasoning</strong></td><td align="center">14B</td><td align="center">8192</td><td align="center"><strong>88.24%</strong></td><td align="center">100.0%</td></tr>
+</tbody>
+</table>
+
+<sub>Top judges ranked by overall accuracy across 8 closed-ended benchmarks (N=64,824 judgments per configuration). Full results for all 16 judges available on the [leaderboard](https://anishh15.github.io/SLMJury/) and in the [paper](https://arxiv.org/abs/2606.07810).</sub>
 
 Explore full results on the interactive leaderboard:
 
@@ -274,6 +308,13 @@ Explore full results on the interactive leaderboard:
 </a>
 </div>
 
+### 🔍 Key Findings
+
+- **Overthinking is domain-dependent**: Quick 10-token verdicts match or beat extended reasoning on math judging, while reasoning wins on general tasks by up to 23%
+- **Domain generalization separates families**: Math-to-general accuracy gaps range from under 10% to nearly 40% across model families
+- **Closed vs. open-ended judging differ**: The best binary judge (Phi-4) drops to rank 9 on MT-Bench; reasoning-trained models invert this ordering
+- **Multi-agent debate degrades accuracy**: Under the RCR protocol, debate hurts performance across all tested configurations, while top judges resist six adversarial personas with ≤0.55% variance
+
 ---
 
 ## 📖 Citation
@@ -281,18 +322,49 @@ Explore full results on the interactive leaderboard:
 If you use SLMJury in your research, please cite:
 
 ```bibtex
-@misc{laddha2026slmjury,
-      title={SLMJury: Can Small Language Models Judge as Well as Large Language Models?},
+@misc{laddha2026slmjurysmalllanguagemodels,
+      title={SLMJury: Can Small Language Models Judge as Well as Large Ones?},
       author={Anish Laddha and Nitesh Pradhan and Gaurav Srivastava},
       year={2026},
+      eprint={2606.07810},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2606.07810},
 }
 ```
 
 ---
 
+## 🤝 Contributing
+
+We welcome contributions! Here's how to get started:
+
+```bash
+git clone https://github.com/anishh15/SLMJury.git
+cd SLMJury
+pip install -e ".[dev]"
+pytest tests/ -v
+```
+
+### 🛠️ Ways to Contribute
+- **🐛 Bug Reports**: Found an issue? [Report it here](https://github.com/anishh15/SLMJury/issues)
+- **✨ Feature Requests**: Have ideas? [Share them here](https://github.com/anishh15/SLMJury/issues)
+- **🔧 Code Contributions**: Submit PRs for improvements
+- **📚 Documentation**: Help improve our docs
+- **🤖 Model Submissions**: Suggest new judge models for evaluation
+
+---
+
+## 📞 Contact & Support
+
+- **📧 Email**: [anshladdha15@gmail.com](mailto:anshladdha15@gmail.com), [nitesh.pradhan@lnmiit.ac.in](mailto:nitesh.pradhan@lnmiit.ac.in), [gks@vt.edu](mailto:gks@vt.edu)
+- **🐛 Issues**: [GitHub Issues](https://github.com/anishh15/SLMJury/issues)
+
+---
+
 ## 📄 License
 
-Apache License 2.0 — see [LICENSE](LICENSE) for details.
+Apache License 2.0 -- see [LICENSE](LICENSE) for details.
 
 ---
 
@@ -300,6 +372,7 @@ Apache License 2.0 — see [LICENSE](LICENSE) for details.
 
 <a href="#-installation"><img src="https://img.shields.io/badge/🚀_Get_Started-FF6B6B?style=for-the-badge" alt="Get Started"/></a>
 <a href="https://anishh15.github.io/SLMJury/"><img src="https://img.shields.io/badge/🏆_Leaderboard-4ECDC4?style=for-the-badge" alt="Leaderboard"/></a>
+<a href="https://arxiv.org/abs/2606.07810"><img src="https://img.shields.io/badge/📖_Read_Paper-red?style=for-the-badge" alt="Paper"/></a>
 <a href="https://github.com/anishh15/SLMJury"><img src="https://img.shields.io/badge/⭐_Star_on_GitHub-yellow?style=for-the-badge" alt="GitHub"/></a>
 
 **Made with ❤️ by [Anish Laddha](https://github.com/anishh15), [Nitesh Pradhan](https://github.com), and [Gaurav Srivastava](https://github.com/ctrl-gaurav)**

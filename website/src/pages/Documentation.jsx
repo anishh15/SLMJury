@@ -1084,11 +1084,14 @@ export VLLM_WORKER_MULTIPROC_METHOD=spawn`} />
 
           {/* ── Citation ── */}
           <Section active={activeSection === 'citation'} id="citation" icon={BarChart3} title="Citation">
-            <CodeBlock language="bibtex" code={`@article{laddha2025slmjury,
-  title   = {SLMJury: Can Small Language Models Judge as Well as Large Language Models?},
+            <CodeBlock language="bibtex" code={`@misc{laddha2026slmjurysmalllanguagemodels,
+  title   = {SLMJury: Can Small Language Models Judge as Well as Large Ones?},
   author  = {Anish Laddha and Nitesh Pradhan and Gaurav Srivastava},
-  year    = {2025},
-  note    = {Manuscript in preparation}
+  year    = {2026},
+  eprint  = {2606.07810},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CL},
+  url     = {https://arxiv.org/abs/2606.07810},
 }`} />
           </Section>
           </div>
