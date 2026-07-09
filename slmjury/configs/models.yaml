@@ -12,6 +12,18 @@ student_models:
     tensor_parallel_size: 2
     gpu_memory_utilization: 0.85
     max_model_len: 32768
+  # E2-B: new student models (Anish — DGX vLLM)
+  deepseek-r1-0528-qwen3-8b:
+    model: "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"
+    tensor_parallel_size: 2
+    gpu_memory_utilization: 0.85
+    max_model_len: 32768
+    always_thinks: true          # emits <think> tokens like phi4r
+  mistral-7b-v0.3:
+    model: "mistralai/Mistral-7B-Instruct-v0.3"
+    tensor_parallel_size: 2
+    gpu_memory_utilization: 0.85
+    max_model_len: 32768
 
 # Oracle models for MT-Bench scoring (Together API)
 # Uses the identical PROMPT_MTBENCH as SLM judges for fair correlation.

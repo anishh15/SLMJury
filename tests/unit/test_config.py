@@ -16,7 +16,7 @@ class TestLoadModelsConfig:
     def test_has_student_models(self):
         config = load_models_config()
         assert "student_models" in config
-        assert len(config["student_models"]) == 2
+        assert len(config["student_models"]) >= 2  # original 2 + E2-B additions
 
     def test_has_datasets(self):
         config = load_models_config()
