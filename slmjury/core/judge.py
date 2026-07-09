@@ -116,6 +116,9 @@ class JudgeModel:
         student_results: list[dict],
         max_tokens: int = 10,
         system_prompt: Optional[str] = None,
+        prompt_style: Optional[str] = None,
+        thinking: Optional[bool] = None,
+        temperature: Optional[float] = None,
     ) -> list[dict]:
         """Evaluate a batch of student solutions.
 
@@ -123,6 +126,14 @@ class JudgeModel:
             student_results: List of student solution dicts.
             max_tokens: Generation limit (10=quick, 8192=reasoned).
             system_prompt: Optional system prompt (e.g., persona prompt).
+            prompt_style: Override prompt selection. "quick" forces PROMPT_QUICK,
+                "reasoned" forces PROMPT_REASONED, None (default) = auto-select
+                based on max_tokens (original behavior: 10 → quick, else → reasoned).
+            thinking: Override thinking-chain activation. True forces thinking on,
+                False forces it off, None (default) = auto-select based on
+                enable_thinking and max_tokens (original behavior).
+            temperature: Override sampling temperature. None (default) = auto-select
+                (0 for greedy; 0.6/top_p=0.95 for thinking mode).
 
         Returns:
             List of judgement dicts with parsed verdicts.
@@ -134,8 +145,21 @@ class JudgeModel:
             len(student_results), max_tokens,
         )
 
-        enable_thinking = self.enable_thinking and max_tokens == 8192
-        prompt_template = PROMPT_QUICK if max_tokens == 10 else PROMPT_REASONED
+        # Resolve thinking mode
+        # None = original auto-select (enable_thinking AND max_tokens == 8192)
+        if thinking is None:
+            enable_thinking = self.enable_thinking and max_tokens == 8192
+        else:
+            enable_thinking = thinking and self.enable_thinking
+
+        # Resolve prompt template
+        # None = original auto-select (max_tokens == 10 → PROMPT_QUICK)
+        if prompt_style is None:
+            prompt_template = PROMPT_QUICK if max_tokens == 10 else PROMPT_REASONED
+        elif prompt_style == "quick":
+            prompt_template = PROMPT_QUICK
+        else:
+            prompt_template = PROMPT_REASONED
 
         # Build chat messages
         messages_list = []
@@ -172,13 +196,16 @@ class JudgeModel:
         ]
 
         # Configure sampling
+        # None = original auto-select
         if enable_thinking:
+            _temp = temperature if temperature is not None else 0.6
             params = SamplingParams(
-                temperature=0.6, top_p=0.95, top_k=20, min_p=0,
+                temperature=_temp, top_p=0.95, top_k=20, min_p=0,
                 max_tokens=max_tokens,
             )
         else:
-            params = SamplingParams(temperature=0, max_tokens=max_tokens)
+            _temp = temperature if temperature is not None else 0
+            params = SamplingParams(temperature=_temp, max_tokens=max_tokens)
 
         outputs = self.llm.generate(prompts, params)
 
