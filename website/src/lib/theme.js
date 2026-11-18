@@ -22,6 +22,20 @@ export function setTheme(t) {
   try { localStorage.setItem(KEY, t) } catch (e) { /* storage unavailable */ }
 }
 
+// With no saved choice, follow the system setting when it changes
+if (typeof window !== 'undefined' && window.matchMedia) {
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+    let saved = null
+    try { saved = localStorage.getItem(KEY) } catch (err) { /* storage unavailable */ }
+    if (saved !== 'light' && saved !== 'dark') {
+      const t = e.matches ? 'light' : 'dark'
+      document.documentElement.dataset.theme = t
+      document.documentElement.style.colorScheme = t
+      listeners.forEach((fn) => fn(t))
+    }
+  })
+}
+
 export function useTheme() {
   const [theme, set] = useState(getTheme)
   useEffect(() => {
