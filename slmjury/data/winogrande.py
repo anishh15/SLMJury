@@ -1,10 +1,7 @@
-"""WinoGrande dataset loader.
+"""WinoGrande loader: pronoun resolution, winogrande_xl config, validation split (test labels are hidden).
 
-Downloads and caches the WinoGrande pronoun resolution dataset from HuggingFace.
-Uses the winogrande_xl config, validation split (test labels are hidden).
-
-Schema: sentence (str with _ blank), option1, option2, answer (str "1" or "2").
-Only 2 choices (A/B), not 4.
+Hugging Face schema: sentence (with a _ blank), option1, option2, answer (str "1" or "2").
+There are only 2 choices (A/B), not 4.
 """
 
 import json
@@ -22,14 +19,10 @@ _INDEX_TO_LETTER = {"1": "A", "2": "B"}
 
 
 def load_winogrande(cache_path: Optional[Path] = None) -> list[dict]:
-    """Load WinoGrande dataset, downloading from HuggingFace if not cached.
+    """Load WinoGrande, downloading it from Hugging Face if not cached.
 
-    Args:
-        cache_path: Custom path to the cache JSON file.
-
-    Returns:
-        List of problem dicts with keys: problem_id, question,
-        ground_truth_reasoning, ground_truth_answer.
+    Returns problem dicts with problem_id, question, ground_truth_reasoning and
+    ground_truth_answer. ``cache_path`` overrides the cache JSON file.
     """
     cache_file = cache_path or DEFAULT_CACHE_FILE
 

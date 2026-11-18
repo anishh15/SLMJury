@@ -1,8 +1,7 @@
 """Answer extraction from model responses across dataset types.
 
-Extracts final answers from model responses for numeric (GSM8K, GSM-Plus),
-LaTeX (MATH), and multiple choice (ARC-Easy, ARC-Challenge) datasets.
-Handles edge cases like repetitive outputs, malformed delimiters, and units.
+Handles numeric (GSM8K, GSM-Plus), LaTeX (MATH) and multiple-choice (ARC-Easy, ARC-Challenge) answers,
+and edge cases such as repetitive outputs, malformed delimiters and units.
 """
 
 import re
@@ -10,14 +9,10 @@ from typing import Optional
 
 
 def extract_answer(response: str, dataset_type: str = "numeric") -> str:
-    """Extract the final answer from a model response based on dataset type.
+    """Extract the final answer from a model response.
 
-    Args:
-        response: The model's text response.
-        dataset_type: One of "numeric", "latex", "multiple_choice".
-
-    Returns:
-        Extracted answer string, or "UNABLE_TO_EXTRACT" if not found.
+    ``dataset_type`` is "numeric", "latex" or "multiple_choice". Returns "UNABLE_TO_EXTRACT" when no
+    answer is found.
     """
     if not response or not response.strip():
         return "UNABLE_TO_EXTRACT"
@@ -30,13 +25,9 @@ def extract_answer(response: str, dataset_type: str = "numeric") -> str:
 
 
 def get_dataset_type(dataset_name: str) -> str:
-    """Map a dataset name to its answer type.
+    """Map a dataset name (e.g. "gsm8k", "math", "arc_easy") to "numeric", "latex" or "multiple_choice".
 
-    Args:
-        dataset_name: Dataset name (e.g., "gsm8k", "math", "arc_easy").
-
-    Returns:
-        One of "numeric", "latex", or "multiple_choice".
+    Unknown names map to "numeric".
     """
     name = dataset_name.lower().replace("-", "_").replace(" ", "_")
 

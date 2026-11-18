@@ -1,8 +1,7 @@
-"""Majority voting ensemble — combines judgements from multiple SLM judges.
+"""Juries: three SLM judges decide each verdict by majority vote.
 
-Generates all C(n,3) three-model combinations from top individual judges and
-majority-votes each problem's verdict. Output format matches individual runs for
-evaluation reuse.
+Builds every three-judge jury (all C(n,3) combinations) of the top individual judges. The output matches the
+individual runs, so scripts/run_strategy_evaluation.py --juries scores it the same way.
 """
 
 import json
@@ -11,6 +10,7 @@ from itertools import combinations
 from pathlib import Path
 from typing import Optional
 
+from slmjury.analysis import paths
 from slmjury.configs import load_models_config
 from slmjury.core.evaluator import parse_judgement_filename
 
@@ -18,15 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def majority_vote(verdicts: list[str]) -> str:
-    """Determine the majority verdict from a list of judgements.
-
-    Args:
-        verdicts: List of verdict strings ("Correct", "Incorrect", or "Undefined").
-
-    Returns:
-        "Correct" if ≥2 agree correct, "Incorrect" if ≥2 agree incorrect,
-        otherwise "Undefined".
-    """
+    """"Correct" or "Incorrect" if at least 2 verdicts agree on it, else "Undefined"."""
     correct_count = sum(1 for v in verdicts if v == "Correct")
     incorrect_count = sum(1 for v in verdicts if v == "Incorrect")
 
@@ -40,18 +32,9 @@ def majority_vote(verdicts: list[str]) -> str:
 def load_judgements_by_key(
     model: str,
     max_tokens: int,
-    judgements_dir: Path = Path("results/judgements"),
+    judgements_dir: Path = Path("results/core/judgements"),
 ) -> dict[tuple[str, str], list[dict]]:
-    """Load all judgement files for a model/token combination.
-
-    Args:
-        model: Judge model key.
-        max_tokens: Token setting.
-        judgements_dir: Base directory for individual judgements.
-
-    Returns:
-        Dict keyed by (student_model, dataset) → list of judgement dicts.
-    """
+    """Load one judge's judgement files at one budget, keyed by (student, dataset)."""
     model_dir = judgements_dir / model
     pattern = f"*_t{max_tokens}.json"
 
@@ -68,15 +51,9 @@ def combine_judgements(
     judgements_list: list[dict[tuple[str, str], list[dict]]],
     model_names: list[str],
 ) -> dict[tuple[str, str], list[dict]]:
-    """Combine judgements from 3 models via majority voting.
+    """Majority-vote the verdicts of 3 judges for every (student, dataset) key all of them have.
 
-    Args:
-        judgements_list: List of 3 dicts (one per model), each keyed by
-            (student, dataset).
-        model_names: List of 3 model key strings.
-
-    Returns:
-        Combined dict with majority-voted verdicts.
+    Each item keeps the first judge's fields and adds ``individual_verdicts``.
     """
     combined: dict[tuple[str, str], list[dict]] = {}
 
@@ -107,14 +84,9 @@ def make_ensemble_name(
     models: list[str],
     token_settings: Optional[dict[str, int]] = None,
 ) -> str:
-    """Create a readable ensemble name.
+    """A readable jury name such as 'qwen3-4b-t10+phi4mi-3.8b-t10+qwen2.5-3b-t10'.
 
-    Args:
-        models: List of model keys.
-        token_settings: Optional dict mapping model key → token setting.
-
-    Returns:
-        Name like 'qwen3-4b-t10+phi4mi-3.8b-t10+qwen2.5-3b-t10'.
+    The budgets are added only when ``token_settings`` is given.
     """
     if token_settings:
         parts = [f"{m}-t{token_settings[m]}" for m in models]
@@ -126,18 +98,9 @@ def make_ensemble_name(
 def save_ensemble_results(
     combined: dict[tuple[str, str], list[dict]],
     ensemble_name: str,
-    output_dir: Path = Path("results/majority_voting"),
+    output_dir: Path = Path("results/core/juries"),
 ) -> list[Path]:
-    """Save combined judgements per (student, dataset) pair.
-
-    Args:
-        combined: Combined judgement dict from combine_judgements.
-        ensemble_name: Name for the ensemble subdirectory.
-        output_dir: Base output directory.
-
-    Returns:
-        List of saved file paths.
-    """
+    """Save each (student, dataset) entry to ``<output_dir>/<ensemble_name>/<student>_<dataset>.json``; returns the paths."""
     saved = []
     out_dir = output_dir / ensemble_name
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -165,15 +128,17 @@ def get_ensemble_judges() -> dict[str, int]:
 
 
 def generate_all_ensembles(
-    judgements_dir: Path = Path("results/judgements"),
-    output_dir: Path = Path("results/majority_voting"),
+    judgements_dir: Optional[Path] = None,
+    output_dir: Optional[Path] = None,
 ):
-    """Generate majority-vote ensembles for all C(5,3)=10 three-model combinations.
+    """Generate majority-vote juries for all C(5,3) = 10 three-model combinations.
 
-    Args:
-        judgements_dir: Directory containing individual judgement files.
-        output_dir: Directory for saving ensemble results.
+    Reads ``judgements_dir`` and writes ``output_dir`` (default core/judgements and core/juries in the results
+    folder). ``python scripts/run_strategy_evaluation.py --juries`` evaluates the results.
     """
+    root = paths.results_dir() / "core"
+    judgements_dir = Path(judgements_dir) if judgements_dir else root / "judgements"
+    output_dir = Path(output_dir) if output_dir else root / "juries"
     token_settings = get_ensemble_judges()
     models = list(token_settings.keys())
     all_combos = list(combinations(models, 3))

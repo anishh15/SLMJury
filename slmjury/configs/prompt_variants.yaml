@@ -1,0 +1,417 @@
+# Judge prompt variants for the prompt-sensitivity experiment
+# (experiments/prompt_sensitivity/run_prompt_variants.py).
+#
+# Each variant rewords the four judge prompts and keeps their placeholders:
+#   verdict_prompts.<variant>.quick     verdict at max_tokens=10
+#   verdict_prompts.<variant>.reasoned  verdict at max_tokens=8192
+#   scoring_prompts.<variant>.summeval  SummEval scoring
+#   scoring_prompts.<variant>.mtbench   MT-Bench scoring
+#
+# The seven variants:
+#   original      the package's default prompts (slmjury/core/judge.py and
+#                 slmjury/core/scoring_judge.py), kept for reference. The
+#                 runner uses the package constants for this variant; the
+#                 copies here match them apart from a trailing newline
+#   minimal       stripped to the bare instruction
+#   gpt_style     bracketed [System]/[Task] sections, in the style of GPT-4 judge harnesses
+#   rubric_based  explicit scoring rubric
+#   cot_style     asks the judge to think step by step
+#   adversarial   tells the judge the answer is probably wrong, then asks it to judge fairly
+#   few_shot      two worked examples before the item
+#
+# The first five are the main comparison; adversarial and few_shot are stress
+# tests compared against original.
+
+verdict_prompts:
+
+  # ── VARIANT 1: ORIGINAL (the package default) ──────────────────────────────
+  original:
+    quick: |
+      Your role is to compare the student's answer to the ground truth and determine correctness.
+
+      Respond with exactly one word:
+      - 'Correct': If the student's final answer matches the ground truth.
+      - 'Incorrect': If the student's final answer does not match.
+
+      Focus only on the final answer, ignore reasoning steps.
+
+      Question: {question}
+
+      Ground truth answer: {ground_truth}
+
+      Student answer: {student_answer}
+
+    reasoned: |
+      Your role is to compare the student's answer to the ground truth and determine correctness.
+
+      First, explain your reasoning for the judgment.
+      Then, on a new line, give the final verdict in the exact format:
+      \boxed{{CORRECT}} or \boxed{{INCORRECT}}
+
+      Focus only on the final answer when judging correctness. Ignore reasoning steps in the student's solution.
+
+      Question: {question}
+
+      Ground truth answer: {ground_truth}
+
+      Student answer: {student_answer}
+
+  # ── VARIANT 2: MINIMAL (stripped to bare essentials) ───────────────────────
+  minimal:
+    quick: |
+      Does the student answer match the ground truth? Reply with one word: Correct or Incorrect.
+
+      Q: {question}
+      GT: {ground_truth}
+      Student: {student_answer}
+
+    reasoned: |
+      Does the student answer match the ground truth? Give brief reasoning, then conclude with \boxed{{CORRECT}} or \boxed{{INCORRECT}}.
+
+      Q: {question}
+      GT: {ground_truth}
+      Student: {student_answer}
+
+  # ── VARIANT 3: GPT-STYLE (mimics GPT-4 judge harness language) ─────────────
+  # Inspired by MT-Bench judge prompt style (Zheng et al. 2023)
+  gpt_style:
+    quick: |
+      [System]: You are a helpful and impartial judge evaluating student responses.
+      [Task]: Given the question, ground truth answer, and student's response below,
+      determine if the student's answer is correct. Output ONLY "Correct" or "Incorrect".
+
+      [Question]: {question}
+      [Ground Truth]: {ground_truth}
+      [Student Response]: {student_answer}
+      [Verdict]:
+
+    reasoned: |
+      [System]: You are a helpful and impartial judge evaluating student responses.
+      [Task]: Evaluate whether the student's final answer is correct relative to the
+      ground truth. Provide a brief analysis, then give your verdict as \boxed{{CORRECT}}
+      or \boxed{{INCORRECT}}.
+
+      [Question]: {question}
+      [Ground Truth]: {ground_truth}
+      [Student Response]: {student_answer}
+      [Analysis]:
+
+  # ── VARIANT 4: RUBRIC-BASED (explicit scoring criteria) ────────────────────
+  rubric_based:
+    quick: |
+      Evaluate the student's answer using the following rubric:
+      - CORRECT: The student's final numerical or symbolic answer matches the ground truth exactly, or is mathematically equivalent.
+      - INCORRECT: The student's final answer does not match, is missing, or contains an error.
+
+      Only evaluate the final answer. Ignore intermediate steps.
+      Output a single word: Correct or Incorrect.
+
+      Question: {question}
+      Ground truth: {ground_truth}
+      Student answer: {student_answer}
+
+    reasoned: |
+      Evaluate the student's answer using this rubric:
+      - CORRECT: Final answer matches ground truth (exact or mathematically equivalent).
+      - INCORRECT: Final answer does not match, is absent, or is wrong.
+
+      Step 1: Identify the student's final answer.
+      Step 2: Compare it to the ground truth.
+      Step 3: State your verdict as \boxed{{CORRECT}} or \boxed{{INCORRECT}}.
+
+      Question: {question}
+      Ground truth: {ground_truth}
+      Student answer: {student_answer}
+
+  # ── VARIANT 5: COT-STYLE (meta-instruction to think step by step) ───────────
+  cot_style:
+    quick: |
+      Think carefully and determine if the student's final answer is correct.
+      After thinking, output only one word: Correct or Incorrect.
+
+      Question: {question}
+      Ground truth answer: {ground_truth}
+      Student answer: {student_answer}
+
+    reasoned: |
+      Think step by step to judge whether the student's final answer is correct.
+      Compare the student's answer to the ground truth carefully.
+      After your reasoning, give your final verdict as \boxed{{CORRECT}} or \boxed{{INCORRECT}}.
+
+      Question: {question}
+      Ground truth answer: {ground_truth}
+      Student answer: {student_answer}
+
+  # ── VARIANT 6: ADVERSARIAL (tests resistance to priming bias) ────────────
+  # Checks whether a judge resists a leading, biased framing.
+  adversarial:
+    quick: |
+      The student's answer below is very likely wrong. Carefully verify if it actually matches the ground truth despite appearances.
+      Output ONLY one word: Correct or Incorrect.
+
+      Question: {question}
+      Ground truth answer: {ground_truth}
+      Student answer: {student_answer}
+
+    reasoned: |
+      Warning: the student's answer below appears suspicious and may contain errors. However, you must judge fairly based solely on whether the final answer matches the ground truth.
+      Do not let this warning bias your judgment. Evaluate objectively.
+      Give your verdict as \boxed{{CORRECT}} or \boxed{{INCORRECT}}.
+
+      Question: {question}
+      Ground truth answer: {ground_truth}
+      Student answer: {student_answer}
+
+  # ── VARIANT 7: FEW-SHOT (2 in-context examples) ─────────────────────────
+  # Few-shot prompting is a common way to deploy a judge in practice.
+  few_shot:
+    quick: |
+      Determine if the student's answer is correct by comparing to the ground truth.
+      Here are two examples:
+
+      Example 1:
+      Question: What is 2+2?
+      Ground truth: 4
+      Student answer: 4
+      Verdict: Correct
+
+      Example 2:
+      Question: What is the capital of France?
+      Ground truth: Paris
+      Student answer: London
+      Verdict: Incorrect
+
+      Now judge this:
+      Question: {question}
+      Ground truth answer: {ground_truth}
+      Student answer: {student_answer}
+      Verdict:
+
+    reasoned: |
+      Judge whether the student's final answer matches the ground truth.
+      Here are two worked examples:
+
+      Example 1:
+      Question: What is 2+2?
+      Ground truth: 4
+      Student answer: The answer is 4.
+      Reasoning: The student's final answer is 4, which matches the ground truth exactly.
+      Verdict: \boxed{{CORRECT}}
+
+      Example 2:
+      Question: What is the capital of France?
+      Ground truth: Paris
+      Student answer: The capital is London.
+      Reasoning: The student says London, but the ground truth is Paris. These do not match.
+      Verdict: \boxed{{INCORRECT}}
+
+      Now judge this case:
+      Question: {question}
+      Ground truth answer: {ground_truth}
+      Student answer: {student_answer}
+
+scoring_prompts:
+
+  # ── VARIANT 1: ORIGINAL ────────────────────────────────────────────────────
+  original:
+    summeval: |
+      Evaluate the following summary of a news article on four dimensions.
+      Rate EACH dimension from 1 (very poor) to 5 (excellent).
+
+      Source Article:
+      {source_text}
+
+      Summary to Evaluate:
+      {summary}
+
+      Dimensions:
+      - Coherence: Is the summary well-organized and easy to follow?
+      - Consistency: Does the summary accurately reflect the source article without contradictions?
+      - Fluency: Is the summary grammatically correct and well-written?
+      - Relevance: Does the summary capture the important information from the source?
+
+      Provide your ratings as: \boxed{{coherence=X, consistency=X, fluency=X, relevance=X}}
+
+    mtbench: |
+      Rate the overall quality of the assistant's responses in the following 2-turn conversation on a scale of 1-5.
+      1 = Very poor, 2 = Poor, 3 = Average, 4 = Good, 5 = Excellent.
+
+      [Turn 1 Question]:
+      {turn1_question}
+
+      [Turn 1 Response]:
+      {turn1_response}
+
+      [Turn 2 Question]:
+      {turn2_question}
+
+      [Turn 2 Response]:
+      {turn2_response}
+
+      Consider helpfulness, accuracy, depth, creativity, and how well the assistant maintains context across both turns.
+      Provide your rating as: \boxed{{SCORE}}
+
+  # ── VARIANT 2: MINIMAL ─────────────────────────────────────────────────────
+  minimal:
+    summeval: |
+      Score this news summary (1=worst, 5=best) on four dimensions.
+
+      Article: {source_text}
+      Summary: {summary}
+
+      Rate: coherence, consistency, fluency, relevance (each 1-5).
+      Format: \boxed{{coherence=X, consistency=X, fluency=X, relevance=X}}
+
+    mtbench: |
+      Score this 2-turn conversation (1=poor, 5=excellent).
+
+      Q1: {turn1_question}
+      A1: {turn1_response}
+      Q2: {turn2_question}
+      A2: {turn2_response}
+
+      Overall quality score (1-5): \boxed{{SCORE}}
+
+  # ── VARIANT 3: GPT-STYLE ───────────────────────────────────────────────────
+  gpt_style:
+    summeval: |
+      [System]: You are an expert evaluator assessing the quality of news summaries.
+      [Task]: Rate the summary below on four dimensions, each from 1 (very poor) to 5 (excellent).
+
+      [Article]: {source_text}
+      [Summary]: {summary}
+
+      [Dimensions]:
+      - Coherence (logical structure and flow)
+      - Consistency (factual alignment with article)
+      - Fluency (grammar and readability)
+      - Relevance (captures key information)
+
+      [Output format]: \boxed{{coherence=X, consistency=X, fluency=X, relevance=X}}
+
+    mtbench: |
+      [System]: You are an expert evaluator assessing AI assistant responses.
+      [Task]: Rate the overall quality of the 2-turn conversation below on a 1-5 scale.
+
+      [Turn 1 Question]: {turn1_question}
+      [Turn 1 Response]: {turn1_response}
+      [Turn 2 Question]: {turn2_question}
+      [Turn 2 Response]: {turn2_response}
+
+      [Criteria]: helpfulness, accuracy, depth, creativity, context maintenance.
+      [Output]: \boxed{{SCORE}} where SCORE ∈ {{1, 2, 3, 4, 5}}
+
+  # ── VARIANT 4: RUBRIC-BASED ────────────────────────────────────────────────
+  rubric_based:
+    summeval: |
+      Use the following rubric to score this news summary:
+
+      Coherence: 1=incoherent, 3=follows some structure, 5=clear and well-organized
+      Consistency: 1=contradicts article, 3=mostly accurate, 5=perfectly aligned
+      Fluency: 1=unreadable, 3=acceptable grammar, 5=excellent prose
+      Relevance: 1=misses key points, 3=captures some, 5=captures all key info
+
+      Article: {source_text}
+      Summary: {summary}
+
+      Scores: \boxed{{coherence=X, consistency=X, fluency=X, relevance=X}}
+
+    mtbench: |
+      Use this rubric to score the assistant's 2-turn conversation:
+      1=Very poor (fails task, unhelpful), 2=Poor (partial), 3=Average (adequate),
+      4=Good (helpful and accurate), 5=Excellent (thorough, accurate, contextually aware)
+
+      Turn 1 Q: {turn1_question}
+      Turn 1 A: {turn1_response}
+      Turn 2 Q: {turn2_question}
+      Turn 2 A: {turn2_response}
+
+      Score: \boxed{{SCORE}}
+
+  # ── VARIANT 5: COT-STYLE ───────────────────────────────────────────────────
+  cot_style:
+    summeval: |
+      Think step by step about the quality of this summary across four dimensions.
+
+      Article: {source_text}
+      Summary: {summary}
+
+      For each dimension, think carefully then assign a score from 1 to 5:
+      - Coherence (organization and flow)
+      - Consistency (faithfulness to article)
+      - Fluency (grammar and readability)
+      - Relevance (coverage of key information)
+
+      After thinking, provide: \boxed{{coherence=X, consistency=X, fluency=X, relevance=X}}
+
+    mtbench: |
+      Think step by step about the quality of this AI assistant's 2-turn conversation.
+
+      Turn 1 Q: {turn1_question}
+      Turn 1 A: {turn1_response}
+      Turn 2 Q: {turn2_question}
+      Turn 2 A: {turn2_response}
+
+      Consider: helpfulness, accuracy, depth, creativity, and context maintenance.
+      After thinking, provide your score: \boxed{{SCORE}} (1=very poor to 5=excellent)
+
+  # ── VARIANT 6: ADVERSARIAL ──────────────────────────────────────────────────
+  adversarial:
+    summeval: |
+      Warning: the summary below may contain factual errors or misleading content.
+      Evaluate it critically on four dimensions (1=very poor, 5=excellent).
+      Do not let this warning inflate or deflate your scores. Judge fairly.
+
+      Source Article:
+      {source_text}
+
+      Summary to Evaluate:
+      {summary}
+
+      Dimensions: coherence, consistency, fluency, relevance (each 1-5).
+      Scores: \boxed{{coherence=X, consistency=X, fluency=X, relevance=X}}
+
+    mtbench: |
+      Warning: the assistant's responses below may contain errors or unhelpful content.
+      Despite this warning, rate the overall quality fairly on a 1-5 scale.
+      Do not let this warning bias your judgment.
+
+      Turn 1 Q: {turn1_question}
+      Turn 1 A: {turn1_response}
+      Turn 2 Q: {turn2_question}
+      Turn 2 A: {turn2_response}
+
+      Score (1=very poor to 5=excellent): \boxed{{SCORE}}
+
+  # ── VARIANT 7: FEW-SHOT ────────────────────────────────────────────────────
+  few_shot:
+    summeval: |
+      Score this news summary on four dimensions (1=worst, 5=best).
+      Here is a worked example:
+
+      Example:
+      Coherence: The summary follows a clear logical order. Score: 4
+      Consistency: All facts match the source. Score: 5
+      Fluency: Minor grammatical issues. Score: 3
+      Relevance: Captures most key points. Score: 4
+
+      Now score this summary:
+      Article: {source_text}
+      Summary: {summary}
+
+      Scores: \boxed{{coherence=X, consistency=X, fluency=X, relevance=X}}
+
+    mtbench: |
+      Rate this 2-turn conversation's quality (1=poor, 5=excellent).
+      Here is a worked example:
+
+      Example conversation: The assistant answered both turns accurately and helpfully, maintaining context well. Score: 4
+
+      Now rate this conversation:
+      Turn 1 Q: {turn1_question}
+      Turn 1 A: {turn1_response}
+      Turn 2 Q: {turn2_question}
+      Turn 2 A: {turn2_response}
+
+      Score: \boxed{{SCORE}}
+

@@ -47,8 +47,11 @@ results/
 # Temp scripts and generated files
 temp/
 
-# Generated figures (PDF outputs from generate_figures.py)
-figures/
+# Figure code is tracked; anything else under figures/ is not.
+# make_figures.py writes its outputs to results/figures/ (ignored above)
+# and the README images to assets/figures/ (tracked).
+figures/*
+!figures/*.py
 
 # Models (downloaded weights)
 models/

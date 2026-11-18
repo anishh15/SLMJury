@@ -1,4 +1,4 @@
-"""Unit tests for slmjury.strategies — ensemble voting and persona definitions."""
+"""Unit tests for slmjury.strategies — juries (majority voting), debate and persona definitions."""
 
 import pytest
 

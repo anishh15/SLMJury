@@ -1,10 +1,7 @@
-"""HellaSwag dataset loader.
+"""HellaSwag loader: the commonsense completion dataset, validation split (test labels are hidden).
 
-Downloads and caches the HellaSwag commonsense completion dataset from HuggingFace.
-Uses the validation split (test labels are hidden).
-
-Schema: ctx (context), endings (list of 4 completions), label (str "0"-"3"),
-        activity_label (activity description).
+Hugging Face schema: ctx (context), endings (4 completions), label (str "0"-"3") and activity_label
+(activity description).
 """
 
 import json
@@ -22,14 +19,10 @@ _INDEX_TO_LETTER = {"0": "A", "1": "B", "2": "C", "3": "D"}
 
 
 def load_hellaswag(cache_path: Optional[Path] = None) -> list[dict]:
-    """Load HellaSwag dataset, downloading from HuggingFace if not cached.
+    """Load HellaSwag, downloading it from Hugging Face if not cached.
 
-    Args:
-        cache_path: Custom path to the cache JSON file.
-
-    Returns:
-        List of problem dicts with keys: problem_id, question,
-        ground_truth_reasoning, ground_truth_answer.
+    Returns problem dicts with problem_id, question, ground_truth_reasoning and
+    ground_truth_answer. ``cache_path`` overrides the cache JSON file.
     """
     cache_file = cache_path or DEFAULT_CACHE_FILE
 

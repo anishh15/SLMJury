@@ -1,17 +1,47 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SLMJury</title>
-    <meta name="description" content="SLMJury — Can Small Language Models Judge as Well as Large Language Models?" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>SLMJury: Can Small Language Models Judge as Well as Large Ones?</title>
+    <meta name="description" content="SLMJury runs {{facts.nSmall}} small and {{facts.nLarge}} large language models through one judging pipeline on {{facts.nBenchmarks}} benchmarks and compares them on answer checking, open-ended scoring, token budgets, personas, juries and debate." />
+    <meta name="theme-color" content="#050D1E" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SLMJury" />
+    <meta property="og:title" content="SLMJury: Can Small Language Models Judge as Well as Large Ones?" />
+    <meta property="og:description" content="{{meta.venue.short}}. {{facts.nSmall}} small and {{facts.nLarge}} large judges, one pipeline, {{facts.nBenchmarks}} benchmarks. An interactive leaderboard, six findings and the code to rerun them." />
+    <meta property="og:url" content="https://anishh15.github.io/SLMJury/" />
+    <meta property="og:image" content="https://anishh15.github.io/SLMJury/social.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="The SLMJury wordmark over a starfield, with an {{meta.venue.chip}} chip, the question and the main result: Phi-4 and the best large judge are equivalent within ±{{claims.margin}} points." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SLMJury: Can Small Language Models Judge as Well as Large Ones?" />
+    <meta name="twitter:description" content="{{meta.venue.short}}. {{facts.nSmall}} small and {{facts.nLarge}} large judges, one pipeline, {{facts.nBenchmarks}} benchmarks. An interactive leaderboard, six findings and the code to rerun them." />
+    <meta name="twitter:image" content="https://anishh15.github.io/SLMJury/social.jpg" />
+    <link rel="icon" type="image/svg+xml" href="/SLMJury/favicon.svg" />
+    <link rel="apple-touch-icon" href="/SLMJury/apple-touch-icon.png" />
+    <script>
+      // Set the theme before first paint: dark unless the reader chose light before.
+      (function () {
+        var d = document.documentElement, t = null
+        d.classList.add('js')
+        try { t = localStorage.getItem('slmjury-theme') } catch (e) {}
+        if (t !== 'light' && t !== 'dark') t = 'dark'
+        d.dataset.theme = t
+        d.style.colorScheme = t
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <p style="max-width:40rem;margin:4rem auto;font-family:system-ui,sans-serif;line-height:1.6;padding:0 1rem">
+        SLMJury needs JavaScript for its charts and leaderboard. The paper is at
+        <a href="https://arxiv.org/abs/2606.07810">arxiv.org/abs/2606.07810</a> and the code at
+        <a href="https://github.com/anishh15/SLMJury">github.com/anishh15/SLMJury</a>.
+      </p>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

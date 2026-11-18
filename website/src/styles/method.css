@@ -1,0 +1,58 @@
+/* Method: the pipeline, three numbers, what varies, and folded tables. */
+
+.mflow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow-1); overflow: hidden; }
+.mf { position: relative; padding: 18px 18px 20px; min-width: 0; }
+.mf + .mf { border-left: 1px solid var(--line); }
+.mf + .mf::before { content: ''; position: absolute; left: -6px; top: 38px; width: 10px; height: 10px; border-top: 1px solid var(--line-strong); border-right: 1px solid var(--line-strong); background: var(--surface); transform: rotate(45deg); }
+.mf-top { height: 34px; display: flex; align-items: center; margin-bottom: 12px; }
+.mf-g { display: inline-flex; gap: 6px; align-items: center; color: var(--accent-ink); font-size: var(--t-15); }
+svg.mf-g { width: 120px; height: 24px; }
+.mf-n { font-family: var(--font-mono); font-size: var(--t-12); color: var(--faint); }
+.mf-t { margin-top: 4px; font-weight: 600; color: var(--ink); line-height: 1.35; font-size: var(--t-15); }
+@media (max-width: 900px) {
+  .mflow { grid-template-columns: minmax(0, 1fr); }
+  .mf + .mf { border-left: 0; border-top: 1px solid var(--line); }
+  .mf + .mf::before { left: 28px; top: -6px; transform: rotate(135deg); }
+  .mf { padding: 14px 16px 16px; }
+  .mf-top { height: 26px; margin-bottom: 8px; }
+}
+
+.mf-big { margin-top: 12px; font-family: var(--font-display); font-size: clamp(1.6rem, 1.2rem + 0.9vw, 2.1rem); font-weight: 470; line-height: 1; letter-spacing: -0.02em; color: var(--ink); }
+.mf-big.gold { color: var(--gold); }
+.mf-big span { font-family: var(--font-sans); font-size: var(--t-14); font-weight: 400; letter-spacing: 0; color: var(--muted); }
+.mf-d { margin-top: 4px; font-size: var(--t-13); color: var(--muted); }
+
+.mnote { margin: var(--s-5) 0 0; max-width: 90ch; font-size: var(--t-15); line-height: 1.6; color: var(--ink-2); }
+.mnote strong { color: var(--ink); }
+
+.msub { margin: var(--s-12) 0 var(--s-3); }
+.mlist { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.ml { display: grid; grid-template-columns: minmax(150px, 220px) 110px minmax(0, 1fr); align-items: baseline; gap: 4px 24px; padding: 14px 2px; border-bottom: 1px solid var(--line); }
+.ml-t { font-weight: 600; color: var(--ink); }
+.ml-n { font-family: var(--font-display); font-size: var(--t-22); font-weight: 470; color: var(--ink); text-align: right; }
+.ml-d { color: var(--muted); font-size: var(--t-15); line-height: 1.5; }
+@media (max-width: 700px) {
+  .ml { grid-template-columns: minmax(0, 1fr) auto; }
+  .ml-n { grid-row: 1; grid-column: 2; }
+  .ml-d { grid-column: 1 / -1; }
+}
+
+.mfolds { display: grid; gap: 10px; margin-top: var(--s-12); padding-bottom: var(--s-16); }
+.fold { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+.fold-btn { width: 100%; display: flex; align-items: center; gap: 12px; padding: 16px 18px; text-align: left; border-radius: calc(var(--r-lg) - 1px); transition: background-color var(--dur-hover) var(--ease-ui); }
+.fold-btn:hover { background: var(--surface-2); }
+.fold-t { font-weight: 600; color: var(--ink); }
+.fold-m { color: var(--muted); font-size: var(--t-14); }
+.fold-c { width: 18px; height: 18px; margin-left: auto; color: var(--muted); transition: transform var(--dur-ui) var(--ease-out); }
+.fold.open .fold-c { transform: rotate(180deg); }
+.fold-body { padding: 0 18px 18px; animation: details-in var(--dur-reveal) var(--ease-out) both; }
+@keyframes details-in { from { opacity: 0; transform: translateY(8px); } }
+.mdocs { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); text-decoration: none; color: inherit; transition: border-color var(--dur-hover) var(--ease-ui), background-color var(--dur-hover) var(--ease-ui); }
+.mdocs:hover { border-color: var(--line-strong); background: var(--surface-2); }
+.mdocs > span { display: grid; gap: 2px; }
+.mdocs strong { color: var(--ink); }
+.mdocs .muted { font-size: var(--t-14); }
+.mdocs svg { width: 18px; height: 18px; color: var(--link); flex: none; transition: transform var(--dur-hover) var(--ease-out); }
+.mdocs:hover svg { transform: translateX(3px); }
+.mbeyond { margin-top: 12px; }
+.mbeyond svg { width: 14px; height: 14px; }

@@ -1,14 +1,7 @@
-"""Robust answer normalization and comparison across dataset types.
+"""Answer normalization and comparison for numeric, LaTeX (MATH) and multiple-choice datasets.
 
-Compares predicted answers against ground truth for numeric (GSM8K, GSM-Plus),
-LaTeX (MATH), and multiple choice (ARC-Easy, ARC-Challenge, HellaSwag,
-WinoGrande, TruthfulQA) datasets. Uses SymPy for symbolic math comparison
-and handles edge cases like fractions, units, and commas.
-
-LaTeX labels come from the tracked file `shared/oracle/math_labels.json`, built
-from the rules in `_strip_format` and `_compare_latex_raw` by
-`tools/build_labels.py`. Package use without that file applies the same rules
-live under a per-pair time limit.
+MATH pairs are looked up in slmjury/parsers/math_labels.json, which scripts/build_math_labels.py builds from
+the rules in ``_strip_format`` and ``_compare_latex_raw``; a pair the table lacks is compared live under a time limit.
 """
 
 import hashlib
@@ -26,15 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 def answers_are_equivalent(predicted: str, ground_truth: str, dataset_type: str = "numeric") -> bool:
-    """Check if predicted answer matches ground truth based on dataset type.
+    """Whether ``predicted`` matches ``ground_truth`` for a dataset type ("numeric", "latex" or "multiple_choice").
 
-    Args:
-        predicted: The model's predicted answer.
-        ground_truth: The correct answer.
-        dataset_type: One of "numeric", "latex", "multiple_choice".
-
-    Returns:
-        True if answers are equivalent.
+    An empty answer or UNABLE_TO_EXTRACT never matches.
     """
     if not predicted or not ground_truth:
         return False
@@ -58,16 +45,7 @@ def numbers_are_equivalent(a: str, b: str) -> bool:
 
 
 def normalize_numeric(value: str) -> str:
-    """Normalize a numeric string for comparison.
-
-    Handles commas, currency symbols, units, fractions, and word multipliers.
-
-    Args:
-        value: The numeric string to normalize.
-
-    Returns:
-        Normalized numeric string.
-    """
+    """Normalize a numeric string for comparison: commas, currency symbols, units, fractions and word multipliers."""
     if not value or not isinstance(value, str):
         return str(value).strip() if value else ""
 
@@ -119,7 +97,7 @@ def _compare_multiple_choice(predicted: str, ground_truth: str) -> bool:
 
 # --- LaTeX comparison ---
 
-LABEL_FILE = Path(__file__).resolve().parents[3] / "shared" / "oracle" / "math_labels.json"
+LABEL_FILE = Path(__file__).resolve().parent / "math_labels.json"
 TIME_LIMIT_S = 8     # per pair; a pair that hits it is not equivalent
 
 _labels: Optional[dict] = None
@@ -171,7 +149,7 @@ def label_sha() -> str:
     """The loaded label file's sha. Raises when there is no label file."""
     _load_labels()
     if _label_sha is None:
-        raise FileNotFoundError(f"{LABEL_FILE} not found: run python tools/build_labels.py")
+        raise FileNotFoundError(f"{LABEL_FILE} not found: run python scripts/build_math_labels.py")
     return _label_sha
 
 
@@ -185,7 +163,7 @@ def _compare_latex(predicted: str, ground_truth: str) -> bool:
         return hit
     if _strict:
         raise MissingLabel(
-            f"no label for answer {pred!r} with gold {gold!r}: run python tools/build_labels.py"
+            f"no label for answer {pred!r} with gold {gold!r}: run python scripts/build_math_labels.py"
         )
     equivalent, timed_out = compare_with_limit(pred, gold)
     if timed_out:

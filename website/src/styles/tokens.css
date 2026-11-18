@@ -1,0 +1,241 @@
+/* SLMJury design tokens, from the README banner. Blue carries structure, gold is a rare accent, family colours live only inside data marks. */
+
+/* Newsreader, cut to weights 400–600 and the glyphs the site sets */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('../fonts/newsreader-display.woff2') format('woff2-variations');
+  unicode-range: U+0020-007E, U+00A0, U+00B1, U+00B7, U+00D7, U+2013-2014, U+2018-2019, U+201C-201D, U+2026, U+2192, U+2212, U+2248;
+}
+@font-face { font-family: 'Plex Sans'; font-weight: 400; font-display: swap; src: url('../../node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Plex Sans'; font-weight: 500; font-display: swap; src: url('../../node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Plex Sans'; font-weight: 600; font-display: swap; src: url('../../node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Plex Mono'; font-weight: 400; font-display: swap; src: url('../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Plex Mono'; font-weight: 500; font-display: swap; src: url('../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2') format('woff2'); }
+/* Metric-matched fallbacks, so the swap to the web fonts does not move the layout. */
+@font-face { font-family: 'Plex Sans Fallback'; src: local('Arial'), local('Helvetica Neue'); size-adjust: 101.5%; ascent-override: 101%; descent-override: 27%; line-gap-override: 0%; }
+@font-face { font-family: 'Newsreader Fallback'; src: local('Georgia'), local('Times New Roman'); size-adjust: 93%; ascent-override: 100%; descent-override: 28%; line-gap-override: 0%; }
+
+:root {
+  /* type */
+  --font-display: 'Newsreader', 'Newsreader Fallback', Georgia, serif;
+  --font-sans: 'Plex Sans', 'Plex Sans Fallback', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --t-11: 0.6875rem;
+  --t-12: 0.75rem;
+  --t-13: 0.8125rem;
+  --t-14: 0.875rem;
+  --t-15: 0.9375rem;
+  --t-17: 1.0625rem;
+  --t-19: 1.1875rem;
+  --t-22: 1.375rem;
+  --t-28: 1.75rem;
+  --t-h2: clamp(1.875rem, 1.35rem + 1.6vw, 2.625rem);
+  --t-h1: clamp(2.375rem, 1.2rem + 4vw, 4.75rem);
+  --tracking-display: -0.021em;
+  --font-mark: 'SLMJury Mark', 'Newsreader', Georgia, serif;
+  --font-mark-i: 'SLMJury Mark Italic', 'Newsreader', Georgia, serif;
+  --tracking-caps: 0.08em;
+
+  /* spacing: a 4 px scale */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
+  --s-20: 80px;
+  --s-24: 96px;
+  --s-32: 128px;
+  --section: clamp(64px, 7.5vw, 108px);
+
+  /* radii */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+  --r-pill: 999px;
+
+  /* layout */
+  --wrap: 1200px;
+  --wrap-wide: 1320px;
+  --gutter: clamp(16px, 4vw, 40px);
+  --header-h: 60px;
+
+  /* motion */
+  --dur-press: 120ms;
+  --dur-hover: 180ms;
+  --dur-ui: 240ms;
+  --dur-layout: 360ms;
+  --dur-reveal: 450ms;
+  --dur-morph: 700ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-ui: cubic-bezier(0.2, 0, 0, 1);
+  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* light mode: white and pale blue, electric-blue accents (palette v2) */
+  --bg: #f6f9fe;
+  --bg-2: #f1f5fb;
+  --surface: #ffffff;
+  --surface-2: #f8fbff;
+  --sunken: #edf3fc;
+  --ink: #0b1b33;
+  --ink-2: #22385a;
+  --muted: #4b5e7a;
+  --faint: #5b6c86;
+  --line: #dde6f3;
+  --line-2: #c9d7ec;
+  --line-strong: rgba(26, 111, 240, 0.4);
+  --accent: #1a6ff0;
+  --accent-2: #2e7df0;
+  --accent-ink: #1a62d6;
+  --cyan: #0e9fc4;
+  --on-accent: #ffffff;
+  --tint: #edf3fb;
+  --tint-2: #d6e3f6;
+  --signal: #1a6ff0;
+  --link: #1a62d6;
+  --gold: #a8820f;
+  --gold-ink: #7a5d06;
+  --gold-tint: #f6ebc8;
+  --code-bg: #071228;
+  --code-raised: #0b1a36;
+  --code-line: #1b2c4f;
+  --code-ink: #e3ecf8;
+  --code-muted: #8ea3c3;
+  --grid: #e6edf6;
+  --axis: #56667c;
+  --header-bg: #f6f9fe;
+  --scrim: rgba(5, 13, 30, 0.42);
+  --star: rgba(26, 111, 240, 0.28);
+  --trace: rgba(26, 111, 240, 0.16);
+  --floor-line: rgba(26, 111, 240, 0.1);
+  /* "SLM" in the wordmark is gold; point --mark-slm at --mark-slm-plain for the earlier fill */
+  --mark-slm: var(--mark-slm-gold);
+  --mark-slm-gold: linear-gradient(180deg, #c99a2e 0%, #a8820f 100%);
+  --mark-slm-plain: linear-gradient(180deg, #0b1b33 0%, #1d3a66 100%);
+  --mark-jury: linear-gradient(135deg, #3f6fb0 0%, #1d3a66 100%);
+  --mark-glow: transparent;
+  --hero-q: #22385a;
+
+  --shadow-1: 0 1px 2px rgba(11, 27, 51, 0.06);
+  --shadow-2: 0 1px 2px rgba(11, 27, 51, 0.05), 0 10px 28px -14px rgba(11, 27, 51, 0.2);
+  --shadow-3: 0 2px 6px rgba(11, 27, 51, 0.06), 0 28px 70px -24px rgba(11, 27, 51, 0.32);
+  --ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--signal);
+
+  --fam-llama: #b5615c;
+  --fam-qwen25: #3f8c81;
+  --fam-qwen3: #4a72b0;
+  --fam-phi4: #c08734;
+  --fam-large: #7e6ba0;
+
+  --v-correct: #2e7a56;
+  --v-correct-bg: #e1f3ea;
+  --v-incorrect: #b04943;
+  --v-incorrect-bg: #fbe6e4;
+  --v-undefined: #5f6f89;
+  --v-undefined-bg: #ebeff5;
+
+  --seq-0: #f6f9fe;
+  --seq-1: #c9e2fc;
+  --seq-2: #9ccbfa;
+  --seq-3: #5b9df5;
+  --seq-4: #1a6ff0;
+  --seq-5: #0b2e62;
+  /* the difference matrix: below, level with, above the reference */
+  --div-neg: 229, 148, 148;
+  --div-pos: 26, 111, 240;
+  --div-neg-max: 0.42;
+  --div-pos-max: 0.3;
+  --teal: #3f8c81;
+  --teal-tint: #d9efeb;
+  /* older names, kept for the findings and judge pages' charts */
+  --navy: var(--accent);
+  --navy-2: var(--accent-2);
+  --navy-mid: var(--accent-2);
+  --on-navy: var(--on-accent);
+  --primary: var(--accent);
+  --on-primary: var(--on-accent);
+}
+
+/* dark (the default): deep space, electric blue and cyan, from the README banner */
+:root[data-theme='dark'] {
+  --bg: #050d1e;
+  --bg-2: #071329;
+  --surface: #0a1530;
+  --surface-2: #0f1d3d;
+  --sunken: #040b1a;
+  --ink: #f4f7fc;
+  --ink-2: #d6e4f7;
+  --muted: #a9bed8;
+  --faint: #8196b5;
+  --line: #1b2c4f;
+  --line-2: rgba(56, 198, 234, 0.14);
+  --line-strong: rgba(46, 125, 240, 0.4);
+  --accent: #1f6fea;
+  --accent-2: #2e7df0;
+  --accent-ink: #9ccbfa;
+  --cyan: #38c6ea;
+  --on-accent: #ffffff;
+  --tint: rgba(46, 125, 240, 0.12);
+  --tint-2: rgba(46, 125, 240, 0.26);
+  --signal: #46d2f2;
+  --link: #9ccbfa;
+  --gold: #e8c35a;
+  --gold-ink: #e8c35a;
+  --gold-tint: rgba(232, 195, 90, 0.14);
+  --code-bg: #030a18;
+  --code-raised: #071328;
+  --code-line: #1b2c4f;
+  --code-ink: #e3ecf8;
+  --code-muted: #7f93b3;
+  --grid: #17284a;
+  --axis: #93a8c4;
+  --header-bg: #050d1e;
+  --scrim: rgba(2, 6, 16, 0.66);
+  --star: rgba(214, 228, 247, 0.85);
+  --trace: rgba(56, 198, 234, 0.22);
+  --floor-line: rgba(56, 198, 234, 0.2);
+  --mark-slm-gold: linear-gradient(180deg, #f3dc9a 0%, #e2c068 50%, #c49a3a 100%);
+  --mark-slm-plain: linear-gradient(180deg, #ffffff 0%, #b9d5fa 100%);
+  --mark-jury: linear-gradient(135deg, #b9d5fa 0%, #6f9fe0 100%);
+  --mark-glow: rgba(31, 111, 234, 0.42);
+  --hero-q: #a8cbf7;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 30px -16px rgba(0, 0, 0, 0.7);
+  --shadow-3: 0 2px 8px rgba(0, 0, 0, 0.4), 0 30px 80px -24px rgba(0, 0, 0, 0.8);
+
+  --fam-llama: #c9736d;
+  --fam-qwen25: #5aafa3;
+  --fam-qwen3: #6c93c8;
+  --fam-phi4: #d6a04d;
+  --fam-large: #9a87be;
+
+  --v-correct: #7cc4a0;
+  --v-correct-bg: rgba(124, 196, 160, 0.13);
+  --v-incorrect: #e59494;
+  --v-incorrect-bg: rgba(229, 148, 148, 0.13);
+  --v-undefined: #a9b4c4;
+  --v-undefined-bg: rgba(169, 180, 196, 0.12);
+
+  --seq-0: #0a1530;
+  --seq-1: #0b2e62;
+  --seq-2: #124ea9;
+  --seq-3: #1a6ff0;
+  --seq-4: #5b9df5;
+  --seq-5: #9ccbfa;
+  --div-neg: 229, 148, 148;
+  --div-pos: 46, 125, 240;
+  --div-neg-max: 0.34;
+  --div-pos-max: 0.46;
+  --teal: #5aafa3;
+  --teal-tint: rgba(90, 175, 163, 0.16);
+}

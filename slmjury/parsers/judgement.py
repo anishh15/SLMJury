@@ -1,8 +1,7 @@
-"""Judgement parsing for SLM judge responses.
+"""Verdict parsing (Correct/Incorrect) for SLM judge responses.
 
-Extracts verdicts (CORRECT/INCORRECT) from judge model responses using a
-priority cascade: boxed format → markdown bold → labeled → quick verdict →
-sentence patterns → fallback. Each method has an associated confidence level.
+Extractors run in priority order (boxed, markdown bold, labeled, quick verdict, sentence patterns, then a
+fallback), and each has a confidence level.
 """
 
 import re
@@ -21,33 +20,15 @@ class ParseResult:
 
 
 def parse_judgement(response: str) -> str:
-    """Parse judge response to extract verdict.
-
-    Args:
-        response: The judge model's response text.
-
-    Returns:
-        "Correct", "Incorrect", or "Undefined".
-    """
+    """Parse a judge response into "Correct", "Incorrect" or "Undefined"."""
     return parse_judgement_detailed(response).verdict
 
 
 def parse_judgement_detailed(response: str) -> ParseResult:
-    """Parse judge response with detailed extraction information.
+    """Parse a judge response; returns a ParseResult with verdict, confidence, method and raw match.
 
-    Tries extraction methods in priority order:
-    1. \\boxed{} format (high confidence)
-    2. **bold** markdown (high confidence)
-    3. Labeled patterns like "VERDICT: X" (medium confidence)
-    4. Quick verdict — standalone word at start (medium confidence)
-    5. Sentence patterns like "The answer is X" (medium confidence)
-    6. Last occurrence of verdict word (low confidence)
-
-    Args:
-        response: The judge model's response text.
-
-    Returns:
-        ParseResult with verdict, confidence, method, and raw match.
+    Tries, in order: \\boxed{} and **bold** (high confidence), labels like "VERDICT: X", a standalone verdict
+    word at the start and sentences like "The answer is X" (medium), then the last verdict word (low).
     """
     if not response or not response.strip():
         return ParseResult("Undefined", "none", "empty_response", None)
@@ -74,39 +55,18 @@ def parse_judgement_detailed(response: str) -> ParseResult:
 
 
 def get_verdict_confidence(response: str) -> Tuple[str, str]:
-    """Get verdict with confidence level (legacy interface).
-
-    Args:
-        response: The judge model's response text.
-
-    Returns:
-        Tuple of (verdict, confidence).
-    """
+    """The verdict and its confidence level as a tuple (legacy interface)."""
     result = parse_judgement_detailed(response)
     return result.verdict, result.confidence
 
 
 def parse_batch(responses: List[str]) -> List[ParseResult]:
-    """Parse multiple judge responses.
-
-    Args:
-        responses: List of judge response strings.
-
-    Returns:
-        List of ParseResult objects.
-    """
+    """Parse a list of judge responses into ParseResult objects."""
     return [parse_judgement_detailed(r) for r in responses]
 
 
 def get_parsing_stats(results: List[ParseResult]) -> dict:
-    """Compute statistics over a batch of parse results.
-
-    Args:
-        results: List of ParseResult from parse_batch.
-
-    Returns:
-        Dictionary with counts and rates by verdict, confidence, and method.
-    """
+    """Counts and rates by verdict, confidence and method over a batch of ParseResult objects."""
     total = len(results)
     if total == 0:
         return {}

@@ -18,19 +18,10 @@ logger = logging.getLogger(__name__)
 
 
 class JudgeEvaluator:
-    """Evaluates judge model performance against ground truth.
+    """Scores one judgement file against the ground truth: accuracy, IFR and disagreements.
 
-    Computes:
-    - Accuracy: % of verdicts matching ground truth.
-    - IFR (Instruction Following Rate): % of valid verdicts.
-    - Disagreements: Cases where judge verdict != expected.
-
-    Args:
-        judge_model: Judge model key.
-        student_model: Student model key.
-        dataset: Dataset name.
-        max_tokens: Token setting used.
-        judgements: List of judgement dicts.
+    Accuracy is the share of verdicts that match the expected verdict, and IFR (instruction following rate)
+    the share of valid verdicts. Takes the judge, student, dataset, budget and the judgement dicts.
     """
 
     def __init__(
@@ -160,15 +151,11 @@ class JudgeEvaluator:
                 )
 
     def save_results(self, output_dir: Optional[Path] = None) -> Path:
-        """Save evaluation results with disagreement details.
+        """Save the evaluation, with disagreement details, to ``<output_dir>/<judge>/<student>_<dataset>_t<n>.json``.
 
-        Args:
-            output_dir: Base directory for saving. Defaults to results/evaluations.
-
-        Returns:
-            Path to the saved JSON file.
+        ``output_dir`` defaults to results/core/evaluations. Returns the saved path.
         """
-        base = output_dir or Path("results/evaluations")
+        base = output_dir or Path("results/core/evaluations")
         out_dir = base / self.judge_model
         out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -196,19 +183,12 @@ def generate_judge_summary(
     eval_dir: Optional[Path] = None,
     output_dir: Optional[Path] = None,
 ) -> Optional[dict]:
-    """Aggregate all evaluation results for a judge model + token setting.
+    """Aggregate every per-file evaluation of one judge at one budget into a summary.
 
-    Args:
-        judge_model: Judge model key.
-        max_tokens: Token setting to aggregate.
-        eval_dir: Directory containing per-file evaluation results.
-        output_dir: Directory for saving the summary JSON.
-
-    Returns:
-        Summary dict with overall and per-dataset/student breakdowns,
-        or None if no files found.
+    Returns the summary (overall, and per dataset and student) after saving it to ``output_dir``, or None
+    when no evaluation files are found.
     """
-    base_eval = eval_dir or Path("results/evaluations")
+    base_eval = eval_dir or Path("results/core/evaluations")
     model_dir = base_eval / judge_model
 
     pattern = f"*_t{max_tokens}.json"
@@ -267,7 +247,7 @@ def generate_judge_summary(
     }
 
     # Save summary
-    summaries_dir = output_dir or Path("results/summaries/individual")
+    summaries_dir = output_dir or Path("results/core/summaries/individual")
     summaries_dir.mkdir(parents=True, exist_ok=True)
     summary_file = summaries_dir / f"{judge_model}_t{max_tokens}.json"
     with open(summary_file, "w") as f:
@@ -278,18 +258,9 @@ def generate_judge_summary(
 
 
 def parse_judgement_filename(filename: str) -> tuple[str, str, int]:
-    """Extract components from a judgement filename.
+    """Split a judgement filename or path, ``{student}_{dataset}_t{n}.json``, into (student, dataset, max_tokens).
 
-    Expected format: {student}_{dataset}_t{n}.json
-
-    Args:
-        filename: Judgement filename or path.
-
-    Returns:
-        Tuple of (student_model, dataset, max_tokens).
-
-    Raises:
-        ValueError: If filename doesn't match expected format.
+    Raises ValueError when the name does not match.
     """
     name = Path(filename).stem
     match = re.match(
@@ -302,16 +273,9 @@ def parse_judgement_filename(filename: str) -> tuple[str, str, int]:
 
 
 def list_judge_models(
-    judgements_dir: Path = Path("results/judgements"),
+    judgements_dir: Path = Path("results/core/judgements"),
 ) -> list[str]:
-    """Get list of all judge models with judgement files.
-
-    Args:
-        judgements_dir: Base directory containing per-model subdirectories.
-
-    Returns:
-        List of judge model directory names.
-    """
+    """Names of the judge subfolders in ``judgements_dir`` (empty if it does not exist)."""
     if not judgements_dir.exists():
         return []
     return [d.name for d in sorted(judgements_dir.iterdir()) if d.is_dir()]
@@ -320,17 +284,10 @@ def list_judge_models(
 def evaluate_judge_with_tokens(
     judge_model: str,
     max_tokens: int,
-    judgements_dir: Path = Path("results/judgements"),
-    output_dir: Path = Path("results/evaluations"),
+    judgements_dir: Path = Path("results/core/judgements"),
+    output_dir: Path = Path("results/core/evaluations"),
 ):
-    """Evaluate all judgement files for a judge/token combination.
-
-    Args:
-        judge_model: Judge model key.
-        max_tokens: Token setting to filter files.
-        judgements_dir: Directory containing per-model judgement subdirectories.
-        output_dir: Base directory for saving evaluation results.
-    """
+    """Evaluate every judgement file of one judge at one budget and save the results under ``output_dir``."""
     model_dir = judgements_dir / judge_model
 
     if not model_dir.exists():

@@ -1,19 +1,10 @@
-"""SLMJury: Can Small Language Models Judge as Well as Large Language Models?
+"""SLMJury: Can Small Language Models Judge as Well as Large Ones?
 
-A framework for evaluating Small Language Models (0.6B-14B) as judges
-of reasoning quality, with support for majority voting ensembles,
-multi-agent debate, and persona effects.
-
-Key Features:
-- 16 SLM judges across Qwen, Llama, and Phi-4 model families
-- 10 datasets (GSM8K, GSM-Plus, MATH, ARC-Easy, ARC-Challenge, HellaSwag, WinoGrande, TruthfulQA, SummEval, MT-Bench)
-- Closed-ended (verdict) and open-ended (scoring) evaluation pipelines
-- Majority voting ensembles from top-5 judges
-- Multi-agent debate with RCR prompting
-- 6 persona system prompts for bias analysis
+16 small judges (0.6B-14B) and six large ones (70B-122B), configured in slmjury/configs/models.yaml, on 8
+closed-ended and 2 open-ended datasets, with quick and reasoned verdicts, personas, juries and debate.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Anish Laddha, Nitesh Pradhan, Gaurav Srivastava"
 __license__ = "Apache-2.0"
 

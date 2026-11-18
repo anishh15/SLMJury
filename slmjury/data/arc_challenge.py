@@ -15,14 +15,10 @@ DEFAULT_CACHE_FILE = DEFAULT_CACHE_DIR / "arc_challenge.json"
 
 
 def load_arc_challenge(cache_path: Optional[Path] = None) -> list[dict]:
-    """Load ARC-Challenge dataset, downloading from HuggingFace if not cached.
+    """Load ARC-Challenge, downloading it from Hugging Face if not cached.
 
-    Args:
-        cache_path: Custom path to the cache JSON file.
-
-    Returns:
-        List of problem dicts with keys: problem_id, question,
-        ground_truth_reasoning, ground_truth_answer.
+    Returns problem dicts with problem_id, question, ground_truth_reasoning and
+    ground_truth_answer. ``cache_path`` overrides the cache JSON file.
     """
     cache_file = cache_path or DEFAULT_CACHE_FILE
 

@@ -1,5 +1,7 @@
 """Unit tests for slmjury.configs — YAML configuration loading."""
 
+import pytest
+
 from slmjury.configs import load_models_config
 
 
@@ -16,7 +18,20 @@ class TestLoadModelsConfig:
     def test_has_student_models(self):
         config = load_models_config()
         assert "student_models" in config
-        assert len(config["student_models"]) >= 2  # original 2 + E2-B additions
+        assert len(config["student_models"]) == 8  # 2 main students + 6 for family bias
+
+    def test_has_large_judge_models(self):
+        config = load_models_config()
+        large = config["large_judge_models"]
+        assert len(large) == 7  # 6 large judges + the Qwen3-32B ladder judge
+        assert [k for k, v in large.items() if v.get("ladder")] == ["qwen3-32b"]
+
+    def test_get_judge_config_searches_both_sections(self):
+        from slmjury.configs import get_judge_config
+        assert get_judge_config("phi4-14b")["model"] == "microsoft/phi-4"
+        assert get_judge_config("qwen3.5-122b")["model"] == "Qwen/Qwen3.5-122B-A10B-FP8"
+        with pytest.raises(ValueError):
+            get_judge_config("no-such-judge")
 
     def test_has_datasets(self):
         config = load_models_config()
@@ -65,24 +80,24 @@ class TestLoadModelsConfig:
         phi4r = config["judge_models"]["phi4r-14b"]
         assert phi4r.get("always_thinks") is True
 
-    def test_has_oracle_models(self):
+    def test_has_reference_models(self):
         config = load_models_config()
-        assert "oracle_models" in config
-        assert len(config["oracle_models"]) == 2
+        assert "reference_models" in config
+        assert len(config["reference_models"]) == 2
 
-    def test_oracle_models_are_together_based(self):
+    def test_reference_models_are_together_based(self):
         config = load_models_config()
-        for key, oracle in config["oracle_models"].items():
-            assert "model" in oracle, f"{key} missing 'model' field"
-            assert oracle.get("provider") == "together", (
+        for key, ref in config["reference_models"].items():
+            assert "model" in ref, f"{key} missing 'model' field"
+            assert ref.get("provider") == "together", (
                 f"{key} should use 'together' provider"
             )
-            assert "api_key_env" in oracle, f"{key} missing 'api_key_env'"
+            assert "api_key_env" in ref, f"{key} missing 'api_key_env'"
 
-    def test_oracle_model_ids(self):
+    def test_reference_model_ids(self):
         config = load_models_config()
-        oracles = config["oracle_models"]
-        assert oracles["gpt-oss-120b"]["model"] == "openai/gpt-oss-120b"
-        assert "Qwen3.5-397B" in oracles["qwen3.5-397b"]["model"]
+        refs = config["reference_models"]
+        assert refs["gpt-oss-120b"]["model"] == "openai/gpt-oss-120b"
+        assert "Qwen3.5-397B" in refs["qwen3.5-397b"]["model"]
 
 

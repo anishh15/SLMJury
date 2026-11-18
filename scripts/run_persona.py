@@ -1,29 +1,38 @@
-"""CLI entry-point: run persona effect evaluation for a single judge model.
-
-Evaluates a judge model with all 6 persona system prompts across all
-student-dataset combinations and both token settings.
-
-Usage:
-    python scripts/run_persona.py --judge qwen3-4b
-    python scripts/run_persona.py --judge qwen3-4b --personas Strict Lenient --max-tokens 10
-
-    # Run all 5 persona models — use the bash wrapper:
-    #   bash bash/run_personas.sh
-"""
+"""CLI entry-point: run one judge model with every persona system prompt."""
 
 import argparse
 import json
 import logging
 from pathlib import Path
 
+from slmjury.analysis import paths
 from slmjury.configs import load_models_config
 from slmjury.core.judge import JudgeModel
 from slmjury.strategies.persona import get_personas, run_persona_evaluation
 
+NOTES = """\
+Runs the judge with all 6 persona system prompts, over every student and
+dataset, at both token settings.
+
+examples:
+  python scripts/run_persona.py --judge qwen3-4b
+  python scripts/run_persona.py --judge qwen3-4b --personas Strict Lenient --max-tokens 10
+
+The study runs it once per judge for qwen3-4b, phi4mi-3.8b, llama3.1-8b,
+qwen3-14b and phi4-14b.
+
+Writes results/core/personas/<judge>/<persona>_<student>_<dataset>_t<budget>.json.
+To score the verdicts against the ground truth (writes
+results/core/personas/evaluations/ and results/core/summaries/personas/), run:
+  python scripts/run_strategy_evaluation.py --personas
+"""
+
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run persona effect evaluation for a single judge model.",
+        description="Run one judge model with every persona system prompt.",
+        epilog=NOTES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "--judge", required=True,
@@ -38,10 +47,10 @@ def main():
         help="Token settings (default: 10 8192)",
     )
     parser.add_argument(
-        "--solutions-dir", default="results/student_solutions",
+        "--solutions-dir", default=paths.default_dir("core", "student_solutions"),
         help="Directory containing student solution files",
     )
-    parser.add_argument("--output-dir", default="results/persona_effect")
+    parser.add_argument("--output-dir", default=paths.default_dir("core", "personas"))
     parser.add_argument(
         "--force", action="store_true",
         help="Re-run even if persona result files already exist",

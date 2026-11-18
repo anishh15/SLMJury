@@ -1,0 +1,2 @@
+# The readme PyPI shows (pyproject.toml points at it)
+include README.pypi.md

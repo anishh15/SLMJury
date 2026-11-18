@@ -1,12 +1,7 @@
-"""Multi-Agent Debate (MAD) — 3 SLM judges debate to reach consensus.
+"""Debate: three SLM judges argue over each verdict until they agree (run it with scripts/run_debate.py).
 
-Implements RCR (Reflect-Critique-Refine) debate prompting where 3 agents
-independently judge each problem, then debate for up to N rounds until
-consensus. Unresolved problems fall back to majority vote.
-
-Two variants:
-- Variant A: Different models at temperature 0.0 (cross-architecture debate).
-- Variant B: Same model at temperatures 0.0, 0.4, 0.9 (diversity via sampling).
+RCR (Reflect-Critique-Refine) prompting: 3 agents (three different models at temperature 0.0, or one model at
+0.0, 0.4 and 0.9) judge each problem, then debate for up to N rounds; problems still split take the majority vote.
 """
 
 import gc
@@ -29,8 +24,11 @@ logger = logging.getLogger(__name__)
 
 MAX_DEBATE_ROUNDS = 5
 
+# Generation budget per agent turn; docs/REPRODUCE.md lists the runs that used 4,096.
+DEFAULT_DEBATE_MAX_TOKENS = 8192
+
 # Debate-specific max_num_seqs overrides (lower than standard judge runs
-# because MAD keeps multiple agent contexts in GPU memory simultaneously).
+# because a debate keeps several agent contexts in GPU memory at once).
 _DEBATE_MAX_NUM_SEQS: dict[str, int] = {
     # 14B models: very tight memory
     "phi4-14b": 3, "phi4r-14b": 3, "phi4rp-14b": 3,
@@ -118,15 +116,15 @@ DEBATE_PROMPT_GENERAL = (
     "Your final verdict must be: \\boxed{{CORRECT}} or \\boxed{{INCORRECT}}"
 )
 
-# Default MAD combinations
+# The ten debate configurations (scripts/run_debate.py --configs takes their indices).
 MAD_COMBINATIONS = [
-    # Variant A: Different models, same temperature (cross-architecture debate)
+    # Cross-architecture: different models, same temperature
     (["llama3.2-3b", "qwen2.5-1.5b", "qwen3-1.7b"], [0, 0, 0]),
     (["qwen2.5-1.5b", "qwen3-1.7b", "phi4mi-3.8b"], [0, 0, 0]),
     (["qwen3-4b", "phi4mi-3.8b", "qwen2.5-3b"], [0, 0, 0]),
     (["qwen3-4b", "qwen2.5-3b", "qwen3-1.7b"], [0, 0, 0]),
     (["llama3.2-3b", "qwen3-4b", "phi4mi-3.8b"], [0, 0, 0]),
-    # Variant B: Same model, different temperatures (diversity via sampling)
+    # Same-model: one model, different temperatures (diversity via sampling)
     (["llama3.2-1b"] * 3, [0, 0.4, 0.9]),
     (["qwen2.5-1.5b"] * 3, [0, 0.4, 0.9]),
     (["qwen3-4b"] * 3, [0, 0.4, 0.9]),
@@ -138,7 +136,7 @@ _MP_CTX = mp.get_context("spawn")
 
 
 def _is_same_model_combo(combo_models: list[str]) -> bool:
-    """Check if all 3 agents use the same model (Variant B)."""
+    """Check if all 3 agents use the same model (a same-model configuration)."""
     return combo_models[0] == combo_models[1] == combo_models[2]
 
 
@@ -160,16 +158,9 @@ def get_debate_prompt_template(dataset_name: str) -> str:
 def build_debate_context(
     debate_state: dict, problem_id, agent_id: int, round_num: int,
 ) -> tuple[str, str]:
-    """Format peer responses from the previous round for the debate prompt.
+    """Format the peers' previous-round responses for the debate prompt.
 
-    Args:
-        debate_state: Full debate state dict.
-        problem_id: Problem ID to look up.
-        agent_id: Current agent's index.
-        round_num: Current round number.
-
-    Returns:
-        Tuple of (own_previous, context) strings for prompt placeholders.
+    Returns (own_previous, context), the strings for the prompt placeholders, for agent ``agent_id`` on ``problem_id``.
     """
     prev_round = debate_state[problem_id]["rounds"][round_num - 1]
 
@@ -192,15 +183,7 @@ def build_debate_context(
 
 
 def check_consensus(debate_state: dict, round_num: int) -> tuple[list, list]:
-    """Check if all 3 agents agree on each unresolved problem.
-
-    Args:
-        debate_state: Full debate state dict.
-        round_num: Current round number.
-
-    Returns:
-        Tuple of (resolved_ids, unresolved_ids).
-    """
+    """Split the unresolved problems by whether all 3 agents agree; returns (resolved_ids, unresolved_ids)."""
     resolved_ids = []
     unresolved_ids = []
 
@@ -297,7 +280,8 @@ def _build_prompts(
     return prompts
 
 
-def _run_inference(judge, model_key: str, prompts: list[str], temperature: float) -> list[str]:
+def _run_inference(judge, model_key: str, prompts: list[str], temperature: float,
+                   max_tokens: int = DEFAULT_DEBATE_MAX_TOKENS) -> list[str]:
     """Run vLLM inference, apply chat template, strip thinking tags."""
     from vllm import SamplingParams
 
@@ -319,10 +303,10 @@ def _run_inference(judge, model_key: str, prompts: list[str], temperature: float
     if enable_thinking:
         params = SamplingParams(
             temperature=temperature, top_p=0.95, top_k=20, min_p=0,
-            max_tokens=8192,
+            max_tokens=max_tokens,
         )
     else:
-        params = SamplingParams(temperature=temperature, max_tokens=8192)
+        params = SamplingParams(temperature=temperature, max_tokens=max_tokens)
 
     outputs = judge.llm.generate(formatted, params)
 
@@ -374,7 +358,7 @@ def _worker_single_agent(input_path: str, output_path: str):
         data["problems"], data["round_num"], data["dataset_name"],
         data.get("debate_state"), data.get("agent_id"),
     )
-    responses = _run_inference(judge, model_key, prompts, data["temperature"])
+    responses = _run_inference(judge, model_key, prompts, data["temperature"], data["max_tokens"])
     results = _parse_responses(data["problems"], responses)
 
     with open(output_path, "wb") as f:
@@ -384,7 +368,7 @@ def _worker_single_agent(input_path: str, output_path: str):
 
 
 def _worker_same_model_agents(input_path: str, output_path: str):
-    """Subprocess entry-point for Variant B: load one model, run 3 temps, exit."""
+    """Subprocess entry-point for a same-model configuration: load one model, run 3 temps, exit."""
     import pickle
     import warnings
     warnings.filterwarnings("ignore")
@@ -404,7 +388,7 @@ def _worker_same_model_agents(input_path: str, output_path: str):
             data["problems"], data["round_num"], data["dataset_name"],
             data.get("debate_state"), agent_idx,
         )
-        responses = _run_inference(judge, model_key, prompts, temp)
+        responses = _run_inference(judge, model_key, prompts, temp, data["max_tokens"])
         all_results.append(_parse_responses(data["problems"], responses))
 
     with open(output_path, "wb") as f:
@@ -422,21 +406,11 @@ def run_agent_turn(
     debate_state: Optional[dict] = None,
     agent_id: Optional[int] = None,
     tp_size_override: Optional[int] = None,
+    max_tokens: int = DEFAULT_DEBATE_MAX_TOKENS,
 ) -> list[dict]:
-    """Run one agent's inference in an isolated subprocess.
+    """Run one agent's inference for a debate round in an isolated subprocess; returns judgement dicts.
 
-    Args:
-        model_key: Judge model key.
-        temperature: Sampling temperature.
-        problems: List of problem dicts.
-        round_num: Current debate round.
-        dataset_name: Dataset name for prompt template selection.
-        debate_state: Current debate state (for rounds > 0).
-        agent_id: Agent index (0, 1, or 2).
-        tp_size_override: Optional tensor_parallel_size override.
-
-    Returns:
-        List of judgement result dicts.
+    ``debate_state`` and ``agent_id`` supply the peers' answers after round 0; ``dataset_name`` picks the prompt.
     """
     logger.info(
         "Agent %s (%s, temp=%.1f): %d problems, round %d",
@@ -458,6 +432,7 @@ def run_agent_turn(
         "debate_state": debate_state,
         "agent_id": agent_id,
         "cfg_override": cfg_override,
+        "max_tokens": max_tokens,
     })
 
 
@@ -469,20 +444,11 @@ def run_agent_turn_same_model(
     dataset_name: str,
     debate_state: Optional[dict] = None,
     tp_size_override: Optional[int] = None,
+    max_tokens: int = DEFAULT_DEBATE_MAX_TOKENS,
 ) -> list[list[dict]]:
-    """Run 3 same-model agents (Variant B) in an isolated subprocess.
+    """Run the 3 agents of a same-model configuration (one model, 3 temperatures) in an isolated subprocess.
 
-    Args:
-        model_key: Judge model key (same for all 3 agents).
-        temperatures: List of 3 temperatures.
-        problems: List of problem dicts.
-        round_num: Current debate round.
-        dataset_name: Dataset name.
-        debate_state: Current debate state.
-        tp_size_override: Optional tensor_parallel_size override.
-
-    Returns:
-        List of 3 lists of judgement result dicts.
+    Returns one list of judgement dicts per agent.
     """
     logger.info(
         "Same-model %s × 3 temps %s: %d problems, round %d",
@@ -503,6 +469,7 @@ def run_agent_turn_same_model(
         "dataset_name": dataset_name,
         "debate_state": debate_state,
         "cfg_override": cfg_override,
+        "max_tokens": max_tokens,
     })
 
 
@@ -512,18 +479,11 @@ def run_debate(
     student_results: list[dict],
     dataset_name: str,
     tp_size_override: Optional[int] = None,
+    max_tokens: int = DEFAULT_DEBATE_MAX_TOKENS,
 ) -> dict:
-    """Run the full debate loop for one combination.
+    """Run the full debate loop for one configuration (3 model keys and 3 temperatures).
 
-    Args:
-        combo_models: List of 3 model keys.
-        combo_temps: List of 3 temperatures.
-        student_results: List of student solution dicts.
-        dataset_name: Dataset name.
-        tp_size_override: Optional tensor_parallel_size override.
-
-    Returns:
-        Debate state dict with final verdicts for all problems.
+    Returns the debate state, with a final verdict for every problem.
     """
     same_model = _is_same_model_combo(combo_models)
 
@@ -555,7 +515,7 @@ def run_debate(
         if same_model:
             all_agent_results = run_agent_turn_same_model(
                 combo_models[0], combo_temps, current_problems,
-                round_num, dataset_name, debate_state, tp_size_override,
+                round_num, dataset_name, debate_state, tp_size_override, max_tokens,
             )
             for agent_idx, agent_results in enumerate(all_agent_results):
                 for result in agent_results:
@@ -569,7 +529,7 @@ def run_debate(
                 agent_results = run_agent_turn(
                     combo_models[agent_idx], combo_temps[agent_idx],
                     current_problems, round_num, dataset_name,
-                    debate_state, agent_idx, tp_size_override,
+                    debate_state, agent_idx, tp_size_override, max_tokens,
                 )
                 for result in agent_results:
                     pid = result["problem_id"]
@@ -602,19 +562,11 @@ def save_debate_results(
     debate_state: dict,
     student_model: str,
     dataset: str,
-    output_dir: Path = Path("results/multi_agent_debate"),
+    output_dir: Path = Path("results/core/debate"),
 ) -> Path:
-    """Convert debate state to final results and save to JSON.
+    """Turn a debate state into final results and save them to ``<output_dir>/<combo_name>/<student>_<dataset>.json``.
 
-    Args:
-        combo_name: Readable combo name for subdirectory.
-        debate_state: Debate state dict from run_debate.
-        student_model: Student model key.
-        dataset: Dataset name.
-        output_dir: Base output directory.
-
-    Returns:
-        Path to the saved JSON file.
+    Returns the saved path.
     """
     final_results = []
     for pid, state in debate_state.items():

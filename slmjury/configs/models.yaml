@@ -12,22 +12,50 @@ student_models:
     tensor_parallel_size: 2
     gpu_memory_utilization: 0.85
     max_model_len: 32768
-  # E2-B: new student models (Anish — DGX vLLM)
+  # Wider student panel for the family-bias study (experiments/family_bias)
   deepseek-r1-0528-qwen3-8b:
     model: "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"
     tensor_parallel_size: 2
     gpu_memory_utilization: 0.85
     max_model_len: 32768
+    dtype: "bfloat16"
     always_thinks: true          # emits <think> tokens like phi4r
   mistral-7b-v0.3:
     model: "mistralai/Mistral-7B-Instruct-v0.3"
     tensor_parallel_size: 2
     gpu_memory_utilization: 0.85
     max_model_len: 32768
+  qwen3-14b-student:
+    model: "Qwen/Qwen3-14B"
+    tensor_parallel_size: 2
+    gpu_memory_utilization: 0.85
+    max_model_len: 32768
+    dtype: "bfloat16"
+  gemma4-31b-student:
+    model: "google/gemma-4-31B-it"
+    tensor_parallel_size: 4
+    gpu_memory_utilization: 0.90
+    max_model_len: 32768
+    dtype: "bfloat16"
+  glm-4.7-flash:
+    model: "zai-org/GLM-4.7-Flash"
+    tensor_parallel_size: 4
+    gpu_memory_utilization: 0.85
+    max_model_len: 32768
+    dtype: "bfloat16"
+    trust_remote_code: true
+  qwen3.5-35b-student:
+    model: "Qwen/Qwen3.5-35B-A3B"
+    tensor_parallel_size: 4
+    gpu_memory_utilization: 0.90
+    max_model_len: 32768
+    dtype: "bfloat16"
+    trust_remote_code: true
 
-# Oracle models for MT-Bench scoring (Together API)
-# Uses the identical PROMPT_MTBENCH as SLM judges for fair correlation.
-oracle_models:
+# Reference models that score MT-Bench (Together API), for
+# scripts/run_mtbench_reference.py. They get the same PROMPT_MTBENCH as the
+# SLM judges, so the correlation compares like with like.
+reference_models:
   gpt-oss-120b:
     provider: "together"
     model: "openai/gpt-oss-120b"
@@ -150,6 +178,75 @@ judge_models:
     enable_thinking: true
     always_thinks: true
 
+# Large judges (70B to 122B) and the Qwen3-32B ladder judge (experiments/large_judges).
+# They run through the same scripts as the small judges: run_judge.py and
+# run_scoring_judge.py look a key up in judge_models first, then here.
+# tensor_parallel_size is the width on 44 GiB GPUs. Quantised checkpoints need
+# dtype "auto", because the judge otherwise defaults to float16.
+large_judge_models:
+  llama3.3-70b:
+    model: "meta-llama/Llama-3.3-70B-Instruct"
+    tensor_parallel_size: 8
+    gpu_memory_utilization: 0.90
+    max_model_len: 32768
+    dtype: "float16"
+    params_b: 70
+  deepseek-r1-distill-llama-70b:
+    model: "deepseek-ai/DeepSeek-R1-Distill-Llama-70B"
+    tensor_parallel_size: 8
+    gpu_memory_utilization: 0.90
+    max_model_len: 32768
+    dtype: "bfloat16"
+    params_b: 70
+    enable_thinking: true
+    always_thinks: true   # the template always opens a <think> block; B=8192 only
+  qwen2.5-72b:
+    model: "Qwen/Qwen2.5-72B-Instruct"
+    tensor_parallel_size: 4
+    gpu_memory_utilization: 0.90
+    max_model_len: 32768
+    dtype: "bfloat16"
+    trust_remote_code: true
+    params_b: 72
+  glm-4.5-air:
+    model: "zai-org/GLM-4.5-Air-FP8"
+    tensor_parallel_size: 8
+    gpu_memory_utilization: 0.90
+    max_model_len: 32768
+    dtype: "auto"
+    trust_remote_code: true
+    params_b: 106
+    active_params_b: 12
+    enable_thinking: true
+    always_thinks: true   # has a thinking switch, but is evaluated at B=8192 only
+  gpt-oss-120b:
+    model: "openai/gpt-oss-120b"
+    tensor_parallel_size: 8
+    gpu_memory_utilization: 0.92
+    max_model_len: 32768
+    dtype: "auto"
+    params_b: 120
+    always_thinks: true   # reasons in its own channels; decoded greedily at B=8192
+  qwen3.5-122b:
+    model: "Qwen/Qwen3.5-122B-A10B-FP8"
+    tensor_parallel_size: 8
+    gpu_memory_utilization: 0.90
+    max_model_len: 32768
+    dtype: "auto"
+    trust_remote_code: true
+    params_b: 122
+    active_params_b: 10
+    enable_thinking: true
+  qwen3-32b:
+    model: "Qwen/Qwen3-32B"
+    tensor_parallel_size: 2
+    gpu_memory_utilization: 0.90
+    max_model_len: 32768
+    dtype: "bfloat16"
+    params_b: 32
+    enable_thinking: true
+    ladder: true          # the one Qwen3 size between the small and large judges
+
 # Datasets supported
 datasets:
   # Closed-ended (verdict: Correct/Incorrect)
@@ -184,7 +281,7 @@ open_ended_settings:
     - fluency
     - relevance
 
-# Top-5 judges for majority voting ensembles (from individual evaluation results)
+# Top-5 judges the juries (majority voting) are drawn from (from individual evaluation results)
 # Ranked by overall accuracy across 8 datasets
 ensemble_judges:
   - key: "phi4-14b"

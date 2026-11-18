@@ -1,12 +1,7 @@
-"""Scoring evaluator — correlation-based metrics for open-ended evaluation.
+"""Scoring evaluator: correlation-based metrics for open-ended evaluation.
 
-Computes agreement between SLM judge scores and ground truth (human for
-SummEval, oracle for MT-Bench) using:
-- Pearson correlation (linear agreement)
-- Spearman rank correlation (robust to non-linearity)
-- Cohen's kappa (binary agreement after thresholding)
-- Accuracy (binary threshold agreement)
-- MSE (absolute score calibration)
+Compares judge scores with the ground truth (human scores for SummEval, reference-model scores for MT-Bench):
+Pearson, Spearman, Cohen's kappa and accuracy after thresholding, and MSE for calibration.
 """
 
 import json
@@ -76,11 +71,9 @@ def _cohens_kappa(
     y: list[float],
     threshold: int = DEFAULT_BINARY_THRESHOLD,
 ) -> Optional[float]:
-    """Compute Cohen's kappa for binary agreement.
+    """Cohen's kappa after binarizing both score lists (>= threshold is 1, GOOD; below is 0, BAD).
 
-    Binarizes scores: ≥ threshold = 1 (GOOD), < threshold = 0 (BAD).
-
-    Returns None if there is no variance in agreement.
+    Returns None when there is no variance in agreement.
     """
     n = len(x)
     if n == 0:
@@ -132,18 +125,10 @@ def evaluate_scores(
     ground_truth: list[float],
     threshold: int = DEFAULT_BINARY_THRESHOLD,
 ) -> dict:
-    """Compute all correlation metrics between judge and ground truth scores.
+    """Every correlation metric between judge scores and ground-truth scores.
 
-    Filters out pairs where judge_score is None (parse failures).
-
-    Args:
-        judge_scores: List of judge-predicted scores (may contain None).
-        ground_truth: List of ground truth scores.
-        threshold: Binary classification threshold for kappa/accuracy.
-
-    Returns:
-        Dict with metrics: pearson, spearman, cohens_kappa, accuracy, mse,
-        n_valid, n_total, parse_failure_rate.
+    Pairs whose judge score is None (a parse failure) are left out. Returns pearson, spearman, cohens_kappa,
+    accuracy, mse, n_valid, n_total and parse_failure_rate; ``threshold`` binarizes for kappa and accuracy.
     """
     n_total = len(judge_scores)
 
@@ -183,14 +168,9 @@ def evaluate_scores(
 
 
 def evaluate_summeval(results: list[dict], threshold: int = DEFAULT_BINARY_THRESHOLD) -> dict:
-    """Evaluate SummEval scoring results across all 4 dimensions.
+    """Metrics for SummEval scoring results (from ScoringJudge.score_summeval) on all 4 dimensions.
 
-    Args:
-        results: List of scored dicts from ScoringJudge.score_summeval().
-        threshold: Binary classification threshold.
-
-    Returns:
-        Dict mapping dimension name → metrics dict, plus an 'overall' average.
+    Returns {dimension: metrics} plus an ``overall`` average.
     """
     from slmjury.parsers.score import SUMMEVAL_DIMENSIONS
 
@@ -222,16 +202,9 @@ def evaluate_summeval(results: list[dict], threshold: int = DEFAULT_BINARY_THRES
 
 
 def evaluate_mtbench(results: list[dict], threshold: int = DEFAULT_BINARY_THRESHOLD) -> dict:
-    """Evaluate MT-Bench scoring results.
+    """Metrics for MT-Bench scoring results (from ScoringJudge.score_mtbench), overall and per category.
 
-    Each question has a single holistic score covering both turns.
-
-    Args:
-        results: List of scored dicts from ScoringJudge.score_mtbench().
-        threshold: Binary classification threshold.
-
-    Returns:
-        Dict with overall metrics and per-category breakdown.
+    Each question has one holistic score covering both turns, compared with the reference model's score.
     """
     judge_scores = [r["judge_score"] for r in results]
     ground_truth = [r["oracle_score"] for r in results]
@@ -247,8 +220,8 @@ def evaluate_mtbench(results: list[dict], threshold: int = DEFAULT_BINARY_THRESH
     per_category = {}
     for cat, cat_results in sorted(categories.items()):
         cat_judge = [r["judge_score"] for r in cat_results]
-        cat_oracle = [r["oracle_score"] for r in cat_results]
-        per_category[cat] = evaluate_scores(cat_judge, cat_oracle, threshold)
+        cat_reference = [r["oracle_score"] for r in cat_results]
+        per_category[cat] = evaluate_scores(cat_judge, cat_reference, threshold)
 
     return {"overall": overall, "per_category": per_category}
 
@@ -257,21 +230,10 @@ def save_evaluation(
     eval_result: dict,
     judge_model: str,
     dataset: str,
-    output_dir: Path = Path("results/scoring_evaluations"),
+    output_dir: Path = Path("results/core/scoring_evaluations"),
     suffix: str = "",
 ) -> Path:
-    """Save evaluation metrics to JSON.
-
-    Args:
-        eval_result: Evaluation result dict.
-        judge_model: Judge model key.
-        dataset: Dataset name ('summeval' or 'mtbench').
-        output_dir: Output directory.
-        suffix: Optional filename suffix.
-
-    Returns:
-        Path to the saved file.
-    """
+    """Save evaluation metrics to ``<output_dir>/<judge>/<dataset>[_<suffix>]_eval.json`` and return the path."""
     out_dir = output_dir / judge_model
     out_dir.mkdir(parents=True, exist_ok=True)
 

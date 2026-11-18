@@ -1,12 +1,7 @@
-"""MT-Bench dataset loader.
+"""MT-Bench loader (philschmid/mt-bench on Hugging Face), downloaded once and cached.
 
-Downloads and caches MT-Bench from HuggingFace (philschmid/mt-bench).
-Each of the 80 questions has 2 turns — a main prompt and a follow-up
-that depends on the model's Turn 1 response.
-
-Requires a student model to generate responses for both turns and
-oracle models to score them. The SLM judge then also scores them
-for comparison.
+Each of the 80 questions has 2 turns, a main prompt and a follow-up that depends on the student's
+Turn 1 response. A student answers both turns; the reference models and the SLM judges score them.
 """
 
 import json
@@ -21,16 +16,10 @@ DEFAULT_CACHE_FILE = DEFAULT_CACHE_DIR / "mtbench.json"
 
 
 def load_mtbench(cache_path: Optional[Path] = None) -> list[dict]:
-    """Load MT-Bench dataset, downloading from HuggingFace if not cached.
+    """Load MT-Bench with both turn prompts, downloading it from Hugging Face if not cached.
 
-    Extracts both Turn 1 and Turn 2 prompts for each question.
-
-    Args:
-        cache_path: Custom path to the cache JSON file.
-
-    Returns:
-        List of dicts with keys: problem_id, question_id, category,
-        turn1, turn2.
+    Returns dicts with problem_id, question_id, category, turn1 and turn2. ``cache_path`` overrides
+    the cache JSON file.
     """
     cache_file = cache_path or DEFAULT_CACHE_FILE
 

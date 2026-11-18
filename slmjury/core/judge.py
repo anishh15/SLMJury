@@ -1,8 +1,7 @@
-"""Judge model — evaluates student solutions using SLM judges via vLLM.
+"""Judge model: evaluates student solutions with SLM judges served by vLLM.
 
-Loads a judge model once and evaluates multiple student-dataset combinations.
-Supports two modes: quick verdict (10 tokens) and reasoned verdict (8192 tokens),
-with optional thinking mode for Qwen3 and Phi-4 reasoning models.
+Loads a judge once for many student-dataset pairs. Quick verdict (10 tokens) or reasoned verdict (8,192
+tokens), with optional thinking mode for Qwen3 and Phi-4 reasoning models.
 """
 
 import gc
@@ -13,7 +12,7 @@ import re
 from pathlib import Path
 from typing import Optional
 
-from slmjury.configs import load_models_config
+from slmjury.configs import get_judge_config
 from slmjury.parsers.judgement import parse_judgement
 
 logger = logging.getLogger(__name__)
@@ -49,17 +48,14 @@ PROMPT_REASONED = (
 class JudgeModel:
     """SLM judge for evaluating student solutions via vLLM.
 
-    Args:
-        model_key: Key from models.yaml judge_models section.
-        output_dir: Base directory for saving judgement results.
-        model_config: Optional config dict override (used by strategies
-            to pass custom tensor_parallel_size, memory settings, etc.).
+    ``model_key`` is a key under judge_models or large_judge_models in models.yaml. ``model_config`` overrides
+    its config (strategies use it for tensor_parallel_size, memory settings and so on).
     """
 
     def __init__(
         self,
         model_key: str,
-        output_dir: Path = Path("results/judgements"),
+        output_dir: Path = Path("results/core/judgements"),
         model_config: Optional[dict] = None,
     ):
         from vllm import LLM
@@ -68,26 +64,13 @@ class JudgeModel:
         self.model_key = model_key
         self.output_dir = Path(output_dir)
 
-        if model_config:
+        if model_config and "model" in model_config:
             cfg = model_config
         else:
-            config = load_models_config()
-            judges = config.get("judge_models", {})
-            if model_key not in judges:
-                raise ValueError(
-                    f"Unknown judge model: {model_key}. "
-                    f"Available: {list(judges.keys())}"
-                )
-            cfg = judges[model_key]
-
-        # Apply overrides from model_config if YAML was used as base
-        if model_config and "model" not in model_config:
-            config = load_models_config()
-            judges = config.get("judge_models", {})
-            if model_key in judges:
-                base = judges[model_key]
-                base.update(model_config)
-                cfg = base
+            # Small judges, then the large and ladder judges (models.yaml).
+            cfg = get_judge_config(model_key)
+            if model_config:
+                cfg.update(model_config)
 
         self.model_name = cfg["model"]
         self.enable_thinking = cfg.get("enable_thinking", False)
@@ -107,6 +90,13 @@ class JudgeModel:
         if cfg.get("max_model_len"):
             vllm_kwargs["max_model_len"] = cfg["max_model_len"]
 
+        # Extra vLLM engine arguments from the model config (optional). Use it for
+        # serving-stack settings that do not change sampling, for example
+        #     vllm_extra: {attention_config: {flash_attn_version: 2}}
+        # to pin FlashAttention 2 on GPUs where version 3 is unstable.
+        for _k, _v in (cfg.get("vllm_extra") or {}).items():
+            vllm_kwargs[_k] = _v
+
         logger.info("Loading judge model: %s", self.model_name)
         self.llm = LLM(**vllm_kwargs)
         logger.info("Judge model loaded: %s", self.model_name)
@@ -119,24 +109,12 @@ class JudgeModel:
         prompt_style: Optional[str] = None,
         thinking: Optional[bool] = None,
         temperature: Optional[float] = None,
+        prompt_template: Optional[str] = None,
     ) -> list[dict]:
-        """Evaluate a batch of student solutions.
+        """Judge a batch of student solutions; returns judgement dicts with parsed verdicts.
 
-        Args:
-            student_results: List of student solution dicts.
-            max_tokens: Generation limit (10=quick, 8192=reasoned).
-            system_prompt: Optional system prompt (e.g., persona prompt).
-            prompt_style: Override prompt selection. "quick" forces PROMPT_QUICK,
-                "reasoned" forces PROMPT_REASONED, None (default) = auto-select
-                based on max_tokens (original behavior: 10 → quick, else → reasoned).
-            thinking: Override thinking-chain activation. True forces thinking on,
-                False forces it off, None (default) = auto-select based on
-                enable_thinking and max_tokens (original behavior).
-            temperature: Override sampling temperature. None (default) = auto-select
-                (0 for greedy; 0.6/top_p=0.95 for thinking mode).
-
-        Returns:
-            List of judgement dicts with parsed verdicts.
+        By default ``max_tokens`` sets the prompt (PROMPT_QUICK at 10, else PROMPT_REASONED) and thinking (at 8,192,
+        for judges with enable_thinking); ``prompt_style``, ``thinking``, ``temperature`` and ``prompt_template`` override them.
         """
         from vllm import SamplingParams
 
@@ -152,14 +130,15 @@ class JudgeModel:
         else:
             enable_thinking = thinking and self.enable_thinking
 
-        # Resolve prompt template
+        # Resolve prompt template (an explicit prompt_template wins)
         # None = original auto-select (max_tokens == 10 → PROMPT_QUICK)
-        if prompt_style is None:
-            prompt_template = PROMPT_QUICK if max_tokens == 10 else PROMPT_REASONED
-        elif prompt_style == "quick":
-            prompt_template = PROMPT_QUICK
-        else:
-            prompt_template = PROMPT_REASONED
+        if prompt_template is None:
+            if prompt_style is None:
+                prompt_template = PROMPT_QUICK if max_tokens == 10 else PROMPT_REASONED
+            elif prompt_style == "quick":
+                prompt_template = PROMPT_QUICK
+            else:
+                prompt_template = PROMPT_REASONED
 
         # Build chat messages
         messages_list = []
@@ -248,17 +227,7 @@ class JudgeModel:
         dataset: str,
         max_tokens: int,
     ) -> Path:
-        """Save judgement results to JSON.
-
-        Args:
-            results: List of judgement dicts from evaluate_batch.
-            student_model: Student model key.
-            dataset: Dataset name.
-            max_tokens: Token setting used.
-
-        Returns:
-            Path to the saved JSON file.
-        """
+        """Save judgements to ``<output_dir>/<judge>/<student>_<dataset>_t<max_tokens>.json`` and return the path."""
         out_dir = self.output_dir / self.model_key
         out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -271,13 +240,11 @@ class JudgeModel:
         logger.info("Saved judgements to %s", out_file.name)
         return out_file
 
-    def cleanup(self, clear_hf_cache: bool = True):
+    def cleanup(self, clear_hf_cache: bool = False):
         """Release GPU memory and clean up distributed processes.
 
-        Args:
-            clear_hf_cache: If True, delete the model's HF cache to free
-                disk space. Set to False for MAD workers that reload
-                models across debate rounds.
+        ``clear_hf_cache=True`` also deletes the model's HF cache to free disk space. It defaults to False because
+        several processes often share one HF cache, and deleting it could remove weights another process is using.
         """
         model_name = getattr(self, "model_name", None)
 

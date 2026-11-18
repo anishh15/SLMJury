@@ -1,8 +1,7 @@
-"""Student solver — generates solutions using large student models via vLLM.
+"""Student solver: generates solutions with large student models served by vLLM.
 
-Loads a student model once and solves problems across multiple datasets
-efficiently. Supports configurable prompt templates per dataset type,
-with dataset-specific routing for science vs. general multiple choice.
+Loads a student once and solves problems across datasets, with a prompt template per dataset type
+(science multiple choice has its own).
 """
 
 import gc
@@ -51,11 +50,10 @@ _SCIENCE_MC_DATASETS = frozenset({"arc_easy", "arc_challenge"})
 
 
 def _get_prompt_key(dataset_name: str, dataset_type: str) -> str:
-    """Get the prompt template key for a dataset.
+    """The prompt template key for a dataset.
 
-    Routes science MC (ARC) to the science-specific prompt and all
-    other MC datasets (HellaSwag, WinoGrande, TruthfulQA) to the
-    general prompt.
+    Science multiple choice (ARC) gets the science prompt; the other multiple-choice datasets (HellaSwag,
+    WinoGrande, TruthfulQA) get the general one.
     """
     if dataset_type == "multiple_choice" and dataset_name not in _SCIENCE_MC_DATASETS:
         return "multiple_choice_general"
@@ -63,18 +61,15 @@ def _get_prompt_key(dataset_name: str, dataset_type: str) -> str:
 
 
 class StudentSolver:
-    """Generates solutions using a large student model via vLLM.
+    """Generates solutions with a large student model via vLLM.
 
-    Args:
-        model_key: Key from models.yaml student_models section.
-        output_dir: Base directory for saving results.
-        model_config: Optional config dict override (skips YAML lookup).
+    ``model_key`` is a key under student_models in models.yaml; ``model_config`` replaces the YAML lookup.
     """
 
     def __init__(
         self,
         model_key: str,
-        output_dir: Path = Path("results/student_solutions"),
+        output_dir: Path = Path("results/core/student_solutions"),
         model_config: Optional[dict] = None,
     ):
         from vllm import LLM
@@ -130,15 +125,9 @@ class StudentSolver:
         dataset_name: str,
         num_samples: Optional[int] = None,
     ) -> list[dict]:
-        """Solve a batch of problems from a dataset.
+        """Solve a dataset's problems (the first ``num_samples`` if given); returns one result dict per problem.
 
-        Args:
-            problems: List of problem dictionaries.
-            dataset_name: Name of the dataset (for prompt template selection).
-            num_samples: Optional limit on number of problems.
-
-        Returns:
-            List of result dictionaries with student solutions.
+        ``dataset_name`` picks the prompt template.
         """
         from vllm import SamplingParams
 
@@ -184,15 +173,7 @@ class StudentSolver:
         return results
 
     def save_results(self, results: list[dict], dataset_name: str) -> Path:
-        """Save student solutions to JSON.
-
-        Args:
-            results: List of result dicts from solve_batch.
-            dataset_name: Dataset name used in filename.
-
-        Returns:
-            Path to the saved JSON file.
-        """
+        """Save student solutions to ``<output_dir>/<student>/<dataset>.json`` and return the path."""
         out_dir = self.output_dir / self.model_key
         out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -205,12 +186,10 @@ class StudentSolver:
         logger.info("Saved %d solutions to %s", len(results), out_file.name)
         return out_file
 
-    def cleanup(self, clear_hf_cache: bool = True):
+    def cleanup(self, clear_hf_cache: bool = False):
         """Release GPU memory and clean up distributed processes.
 
-        Args:
-            clear_hf_cache: If True, delete the model's HF cache to free
-                disk space.
+        ``clear_hf_cache=True`` also deletes the model's HF cache; it defaults to False (see JudgeModel.cleanup).
         """
         model_name = getattr(self, "model_name", None)
 
@@ -250,14 +229,10 @@ class StudentSolver:
 
 
 def calculate_accuracy(results: list[dict], dataset_name: str) -> dict:
-    """Calculate accuracy metrics for a set of student results.
+    """Accuracy of a set of student results against their ground-truth answers.
 
-    Args:
-        results: List of result dicts with student_answer and ground_truth_answer.
-        dataset_name: Dataset name for choosing comparison function.
-
-    Returns:
-        Dict with correct, valid, total, accuracy, and accuracy_pct.
+    Returns correct, valid (an answer was extracted), total, accuracy and accuracy_pct; ``dataset_name``
+    picks the comparison.
     """
     dataset_type = get_dataset_type(dataset_name)
     total = len(results)
@@ -285,18 +260,9 @@ def calculate_accuracy(results: list[dict], dataset_name: str) -> dict:
 def save_accuracy_summary(
     accuracy_data: dict,
     model_key: str,
-    output_dir: Path = Path("results/summaries"),
+    output_dir: Path = Path("results/core/summaries"),
 ) -> Path:
-    """Save accuracy summary, appending to existing file if present.
-
-    Args:
-        accuracy_data: Dict mapping dataset name → accuracy metrics dict.
-        model_key: Student model key.
-        output_dir: Directory for the summary JSON.
-
-    Returns:
-        Path to the saved summary file.
-    """
+    """Merge one student's per-dataset accuracy into ``<output_dir>/student_accuracy.json`` and return its path."""
     output_dir.mkdir(parents=True, exist_ok=True)
     summary_file = output_dir / "student_accuracy.json"
 
@@ -321,17 +287,12 @@ def save_accuracy_summary(
 
 
 def recalculate_accuracy_from_files(
-    solutions_dir: Path = Path("results/student_solutions"),
-    output_dir: Path = Path("results/summaries"),
+    solutions_dir: Path = Path("results/core/student_solutions"),
+    output_dir: Path = Path("results/core/summaries"),
 ):
-    """Recalculate accuracy summary from existing student solution files.
+    """Rebuild ``<output_dir>/student_accuracy.json`` from the saved solution files, without rerunning inference.
 
-    Useful when the accuracy calculation logic changes — avoids re-running
-    inference.
-
-    Args:
-        solutions_dir: Directory containing per-model solution subdirectories.
-        output_dir: Directory for the summary JSON.
+    Reads ``<solutions_dir>/<student>/*.json``.
     """
     logger.info("Recalculating student accuracy from existing solutions...")
 

@@ -1,11 +1,7 @@
-"""Scoring judge — evaluates open-ended tasks by assigning numerical scores.
+"""Scoring judge: scores open-ended tasks with numbers instead of Correct/Incorrect verdicts.
 
-Supports two modes:
-- SummEval: 4-dimension single-call scoring (coherence, consistency, fluency, relevance)
-- MT-Bench: Single score (1-5) for response quality
-
-Reuses the same vLLM infrastructure as JudgeModel but with scoring prompts
-instead of Correct/Incorrect verdict prompts.
+SummEval gets all 4 dimensions (coherence, consistency, fluency, relevance) in one call; MT-Bench gets one
+1-5 score for response quality. Uses the same vLLM setup as JudgeModel, with scoring prompts.
 """
 
 import gc
@@ -15,7 +11,7 @@ import re
 from pathlib import Path
 from typing import Optional
 
-from slmjury.configs import load_models_config
+from slmjury.configs import get_judge_config
 from slmjury.parsers.score import parse_score, parse_multi_score, SUMMEVAL_DIMENSIONS
 
 logger = logging.getLogger(__name__)
@@ -41,8 +37,8 @@ PROMPT_SUMMEVAL = (
 
 
 # --- MT-Bench Prompt (2-turn holistic) ---
-# NOTE: This prompt is shared identically with scripts/run_mtbench_oracle.py
-# (Together API) to ensure fair SLM-LLM correlation measurement.
+# NOTE: scripts/run_mtbench_reference.py sends this same prompt to the
+# reference models (Together API), so judge and reference score the same text.
 
 PROMPT_MTBENCH = (
     "Rate the overall quality of the assistant's responses in the following "
@@ -61,16 +57,14 @@ PROMPT_MTBENCH = (
 class ScoringJudge:
     """SLM judge for scoring open-ended tasks via vLLM.
 
-    Args:
-        model_key: Key from models.yaml judge_models section.
-        output_dir: Base directory for saving scoring results.
-        model_config: Optional config dict override.
+    ``model_key`` is a key under judge_models or large_judge_models in models.yaml; ``model_config``
+    overrides its config.
     """
 
     def __init__(
         self,
         model_key: str,
-        output_dir: Path = Path("results/scoring"),
+        output_dir: Path = Path("results/core/scoring"),
         model_config: Optional[dict] = None,
     ):
         from vllm import LLM
@@ -79,14 +73,8 @@ class ScoringJudge:
         self.model_key = model_key
         self.output_dir = Path(output_dir)
 
-        config = load_models_config()
-        judges = config.get("judge_models", {})
-        if model_key not in judges:
-            raise ValueError(
-                f"Unknown judge model: {model_key}. "
-                f"Available: {list(judges.keys())}"
-            )
-        cfg = dict(judges[model_key])
+        # Small judges, then the large and ladder judges (models.yaml).
+        cfg = get_judge_config(model_key)
 
         # Apply CLI overrides
         if model_config:
@@ -121,16 +109,12 @@ class ScoringJudge:
         summeval_data: list[dict],
         max_tokens: int = 8192,
         system_prompt: Optional[str] = None,
+        prompt_template: Optional[str] = None,
     ) -> list[dict]:
-        """Score SummEval pairs on 4 dimensions.
+        """Score SummEval pairs on all 4 dimensions; returns dicts with the judge's score per dimension.
 
-        Args:
-            summeval_data: List of SummEval dicts from data loader.
-            max_tokens: Generation limit.
-            system_prompt: Optional system prompt (e.g., persona).
-
-        Returns:
-            List of scored dicts with judge predictions per dimension.
+        ``system_prompt`` adds a system message (a persona, for example). ``prompt_template`` replaces
+        PROMPT_SUMMEVAL and takes the same {source_text} and {summary} fields.
         """
         from vllm import SamplingParams
 
@@ -141,6 +125,8 @@ class ScoringJudge:
 
         enable_thinking = self.enable_thinking and max_tokens >= 8192
 
+        template = PROMPT_SUMMEVAL if prompt_template is None else prompt_template
+
         # Build chat messages
         messages_list = []
         for item in summeval_data:
@@ -149,7 +135,7 @@ class ScoringJudge:
                 msgs.append({"role": "system", "content": system_prompt})
             msgs.append({
                 "role": "user",
-                "content": PROMPT_SUMMEVAL.format(
+                "content": template.format(
                     source_text=item["source_text"],
                     summary=item["summary"],
                 ),
@@ -205,20 +191,12 @@ class ScoringJudge:
         mtbench_data: list[dict],
         max_tokens: int = 8192,
         system_prompt: Optional[str] = None,
+        prompt_template: Optional[str] = None,
     ) -> list[dict]:
-        """Score MT-Bench 2-turn conversations on a 1-5 scale.
+        """Score each MT-Bench 2-turn conversation as a whole on a 1-5 scale; returns dicts with judge_score.
 
-        Evaluates the full 2-turn conversation holistically with a single
-        score per question. Uses the same prompt as the oracle for fair
-        SLM-LLM correlation measurement.
-
-        Args:
-            mtbench_data: List of dicts with turn1/turn2 question/response.
-            max_tokens: Generation limit.
-            system_prompt: Optional system prompt (e.g., persona).
-
-        Returns:
-            List of scored dicts with judge_score per question.
+        Uses the reference models' prompt, so the correlation compares like with like. ``prompt_template`` replaces
+        PROMPT_MTBENCH and takes the same turn1_question, turn1_response, turn2_question and turn2_response fields.
         """
         from vllm import SamplingParams
 
@@ -229,6 +207,7 @@ class ScoringJudge:
 
         enable_thinking = self.enable_thinking and max_tokens >= 8192
 
+        template = PROMPT_MTBENCH if prompt_template is None else prompt_template
         messages_list = []
         for item in mtbench_data:
             msgs = []
@@ -236,7 +215,7 @@ class ScoringJudge:
                 msgs.append({"role": "system", "content": system_prompt})
             msgs.append({
                 "role": "user",
-                "content": PROMPT_MTBENCH.format(
+                "content": template.format(
                     turn1_question=item["turn1_question"],
                     turn1_response=item["turn1_response"],
                     turn2_question=item["turn2_question"],
@@ -289,16 +268,7 @@ class ScoringJudge:
         dataset: str,
         suffix: str = "",
     ) -> Path:
-        """Save scoring results to JSON.
-
-        Args:
-            results: List of scored dicts.
-            dataset: Dataset name ('summeval' or 'mtbench').
-            suffix: Optional filename suffix (e.g., persona name).
-
-        Returns:
-            Path to the saved JSON file.
-        """
+        """Save scoring results to ``<output_dir>/<judge>/<dataset>[_<suffix>].json`` and return the path."""
         out_dir = self.output_dir / self.model_key
         out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -314,8 +284,11 @@ class ScoringJudge:
         logger.info("Saved scoring results to %s", out_file.name)
         return out_file
 
-    def cleanup(self):
-        """Release GPU memory and optionally clear HF cache."""
+    def cleanup(self, clear_hf_cache: bool = False):
+        """Release GPU memory, and delete the model's HF cache if ``clear_hf_cache`` is True.
+
+        It defaults to False; see JudgeModel.cleanup.
+        """
         logger.info("Cleaning up scoring judge: %s", self.model_key)
         del self.llm
         del self.tokenizer
@@ -327,13 +300,14 @@ class ScoringJudge:
             pass
 
         # Clear HF cache for this model
-        import shutil
-        cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
-        if cache_dir.exists():
-            model_safe = self.model_name.replace("/", "--")
-            for d in cache_dir.glob(f"models--{model_safe}*"):
-                shutil.rmtree(d, ignore_errors=True)
-                logger.info("Cleared cache: %s", d.name)
+        if clear_hf_cache:
+            import shutil
+            cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
+            if cache_dir.exists():
+                model_safe = self.model_name.replace("/", "--")
+                for d in cache_dir.glob(f"models--{model_safe}*"):
+                    shutil.rmtree(d, ignore_errors=True)
+                    logger.info("Cleared cache: %s", d.name)
 
     # --- Internal helpers ---
 

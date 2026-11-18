@@ -1,11 +1,7 @@
-"""SummEval dataset loader.
+"""SummEval loader (mteb/summeval on Hugging Face): 1,600 summaries with human scores.
 
-Downloads and caches the SummEval summarization evaluation dataset from
-HuggingFace (mteb/summeval). Flattens 100 articles × 16 machine summaries
-into 1,600 scored pairs, each with human expert scores on 4 dimensions:
-coherence, consistency, fluency, and relevance.
-
-No student model needed — human scores serve as ground truth.
+100 articles x 16 machine summaries, each scored by experts for coherence, consistency, fluency and
+relevance. The human scores are the ground truth, so no student model is needed.
 """
 
 import json
@@ -22,17 +18,10 @@ DIMENSIONS = ["coherence", "consistency", "fluency", "relevance"]
 
 
 def load_summeval(cache_path: Optional[Path] = None) -> list[dict]:
-    """Load SummEval dataset, downloading from HuggingFace if not cached.
+    """Load SummEval, downloading it from Hugging Face if not cached.
 
-    Each entry represents one (article, machine_summary) pair with averaged
-    human scores across annotators for each quality dimension.
-
-    Args:
-        cache_path: Custom path to the cache JSON file.
-
-    Returns:
-        List of dicts with keys: problem_id, source_text, summary,
-        coherence, consistency, fluency, relevance (each a float 1-5).
+    One dict per (article, machine summary) pair: problem_id, source_text, summary, and the annotators'
+    mean coherence, consistency, fluency and relevance (floats, 1-5). ``cache_path`` overrides the cache file.
     """
     cache_file = cache_path or DEFAULT_CACHE_FILE
 

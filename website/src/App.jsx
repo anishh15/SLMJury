@@ -1,39 +1,137 @@
-import { Routes, Route } from 'react-router-dom'
-import Navbar from './components/Navbar'
-import Footer from './components/Footer'
-import Leaderboard from './pages/Leaderboard'
-import Documentation from './pages/Documentation'
-import ResultsShowcase from './pages/ResultsShowcase'
-import { useTheme } from './context/ThemeContext'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import { pageModule, parse, preload, registerExtra, setHomeModule, useRoute } from './lib/router'
+import { Header, Footer, ToTop } from './components/Shell'
+import Home from './pages/Home'
+import { byKey, loadResults } from './lib/data'
+import { loadDoc, loadDocIndex } from './lib/docs'
 
-function App() {
-  const { isDark } = useTheme()
+setHomeModule(Home)
+// Pages that need the per-figure tables or a docs page get them before the
+// route changes, so they render complete inside the view transition.
+const withResults = () => loadResults()
+registerExtra('findings', withResults)
+registerExtra('judge', withResults)
+registerExtra('pick', withResults)
+registerExtra('leaderboard', withResults)
+registerExtra('docs', (route) => Promise.all([loadDoc(route?.parts?.[1] || 'getting-started'), loadDocIndex()]))
 
-  return (
-    <div className={`min-h-screen ${isDark ? 'bg-bb-dark-500' : 'bg-bb-light-100'} grid-bg relative`}>
-      {/* Background effects wrapper — overflow-hidden here so orbs are clipped without breaking sticky/fixed */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className={`orb w-96 h-96 -top-48 -left-48 ${isDark ? 'bg-bb-accent' : 'bg-bb-accent-dark'}`} />
-        <div className={`orb w-72 h-72 top-1/3 -right-36 ${isDark ? 'bg-bb-teal' : 'bg-bb-teal'}`} />
-        <div className={`orb w-64 h-64 bottom-0 left-1/4 ${isDark ? 'bg-bb-purple' : 'bg-bb-purple'}`} />
-        <div className={`orb w-48 h-48 top-2/3 right-1/4 ${isDark ? 'bg-bb-cyan' : 'bg-bb-cyan'}`} />
-        <div className="mesh-gradient absolute inset-0" />
-        {isDark && <div className="scanline absolute inset-0" />}
-      </div>
+const Palette = lazy(() => import('./components/CommandPalette'))
 
-      <div className="relative z-10">
-        <Navbar />
-        <main className="pt-16">
-          <Routes>
-            <Route path="/" element={<Leaderboard />} />
-            <Route path="/docs" element={<Documentation />} />
-            <Route path="/results" element={<ResultsShowcase />} />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
-    </div>
-  )
+const TITLES = {
+  home: 'SLMJury: Can Small Language Models Judge as Well as Large Ones?',
+  findings: 'Findings · SLMJury',
+  leaderboard: 'Leaderboard · SLMJury',
+  pick: 'Pick a judge · SLMJury',
+  method: 'Method · SLMJury',
+  docs: 'Docs · SLMJury',
+  cite: 'Paper and citation · SLMJury',
 }
 
-export default App
+// A page loads when a link to it is hovered, focused or touched; the main pages follow one at a time once the first screen settles.
+function usePrefetch() {
+  useEffect(() => {
+    const seen = new Set()
+    const warm = (hash) => {
+      if (seen.has(hash)) return Promise.resolve()
+      seen.add(hash)
+      const r = parse(hash)
+      return preload(r.page, r)
+    }
+    const onIntent = (e) => {
+      const a = e.target instanceof Element ? e.target.closest('a[href^="#/"]') : null
+      if (a) warm(a.getAttribute('href'))
+    }
+    document.addEventListener('pointerover', onIntent, { passive: true })
+    document.addEventListener('focusin', onIntent)
+    document.addEventListener('touchstart', onIntent, { passive: true })
+
+    const queue = [
+      () => warm('#/findings'),
+      () => warm('#/leaderboard'),
+      () => warm('#/docs/getting-started'),
+      () => import('./components/CommandPalette'),
+    ]
+    const hasIdle = 'requestIdleCallback' in window
+    let timer = 0
+    let idle = 0
+    let stopped = false
+    const whenIdle = (fn) => (hasIdle ? requestIdleCallback(fn, { timeout: 4000 }) : setTimeout(fn, 1200))
+    const next = () => {
+      if (stopped || !queue.length) return
+      Promise.resolve(queue.shift()()).catch(() => {}).finally(() => { if (!stopped) idle = whenIdle(next) })
+    }
+    const settle = () => { timer = setTimeout(() => { idle = whenIdle(next) }, 2000) }
+    const saveData = navigator.connection && navigator.connection.saveData
+    if (!saveData) {
+      if (document.readyState === 'complete') settle()
+      else window.addEventListener('load', settle, { once: true })
+    }
+    return () => {
+      stopped = true
+      document.removeEventListener('pointerover', onIntent)
+      document.removeEventListener('focusin', onIntent)
+      document.removeEventListener('touchstart', onIntent)
+      window.removeEventListener('load', settle)
+      clearTimeout(timer)
+      if (hasIdle) cancelIdleCallback(idle)
+      else clearTimeout(idle)
+    }
+  }, [])
+}
+
+export default function App() {
+  const route = useRoute()
+  const [palette, setPalette] = useState(false)
+  const [, force] = useState(0)
+  const Page = pageModule(route.page)
+  usePrefetch()
+  useEffect(() => { if (!Page) preload(route.page, route).then(() => force((n) => n + 1)) }, [Page, route.page])
+  useEffect(() => {
+    if (route.page === 'judge') document.title = `${byKey[route.parts[1]]?.name ?? 'Judge'} · SLMJury`
+    else document.title = TITLES[route.page] || 'Not found · SLMJury'
+  }, [route.page, route.parts[1]])
+  useEffect(() => {
+    const onKey = (e) => {
+      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable
+      if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setPalette((o) => !o) }
+      else if (e.key === '/' && !typing && !palette) { e.preventDefault(); setPalette(true) }
+    }
+    const onOpen = () => setPalette(true)
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('slmjury:search', onOpen)
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('slmjury:search', onOpen) }
+  }, [palette])
+  // a link to one chart (?chart=<id>): scroll to it once it has rendered
+  const chartId = route.query.get('chart')
+  useEffect(() => {
+    if (!chartId || route.page === 'findings') return
+    let tries = 0
+    let raf = 0
+    const go = () => {
+      const el = document.getElementById(`chart-${chartId}`)
+      if (el) el.scrollIntoView({ block: 'center' })
+      else if (tries++ < 90) raf = requestAnimationFrame(go)
+    }
+    raf = requestAnimationFrame(go)
+    return () => cancelAnimationFrame(raf)
+  }, [chartId, route.page, route.parts[1]])
+  const pageKey = route.page === 'judge' ? `judge-${route.parts[1]}` : route.page === 'docs' ? `docs-${route.parts[1]}` : route.page
+  return (
+    <>
+        <a className="skip-link" href="#main" onClick={(e) => { e.preventDefault(); document.getElementById('main')?.focus() }}>Skip to content</a>
+        <Header route={route} onSearch={() => setPalette(true)} />
+        <main id="main" tabIndex={-1}>
+          <div className="page" key={pageKey} data-page={route.page}>
+            {Page ? <Page route={route} /> : <div className="wrap page-loading"><div className="skeleton" style={{ height: 420 }} /></div>}
+          </div>
+        </main>
+        <Footer />
+        <ToTop />
+        {palette && (
+          <Suspense fallback={null}>
+            <Palette onClose={() => setPalette(false)} />
+          </Suspense>
+        )}
+    </>
+  )
+}

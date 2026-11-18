@@ -1,7 +1,6 @@
-"""MATH dataset loader.
+"""MATH loader: the 5,000 test problems of the seven subjects, from pinned Parquet files on the Hub.
 
-Downloads and caches the MATH reasoning dataset (7 subjects) from HuggingFace.
-Extracts ground truth answers from \\boxed{} LaTeX expressions.
+The ground-truth answer is the content of the last \\boxed{} in each reference solution.
 """
 
 import json
@@ -9,11 +8,19 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+from slmjury.data.hub import check_size, read_parquet_rows
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_CACHE_DIR = Path("data") / "math"
 DEFAULT_CACHE_FILE = DEFAULT_CACHE_DIR / "math.json"
 
+# The dataset's own Parquet files, pinned to one commit of its repository.
+MATH_REPO = "EleutherAI/hendrycks_math"
+MATH_REVISION = "21a5633873b6a120296cce3e2df9d5550074f4a3"
+MATH_SIZE = 5000
+
+# Subjects in study order; problem_id counts through them in this order.
 MATH_SUBJECTS = [
     "algebra",
     "counting_and_probability",
@@ -26,53 +33,36 @@ MATH_SUBJECTS = [
 
 
 def load_math(cache_path: Optional[Path] = None) -> list[dict]:
-    """Load MATH dataset, downloading from HuggingFace if not cached.
+    """The MATH test set as problem dicts (problem_id, question, ground_truth_reasoning, ground_truth_answer).
 
-    Downloads all 7 subject configs and merges them into a single list.
-
-    Args:
-        cache_path: Custom path to the cache JSON file.
-
-    Returns:
-        List of problem dicts with keys: problem_id, question,
-        ground_truth_reasoning, ground_truth_answer.
+    Downloads once and caches the result as JSON. Raises DatasetLoadError when the
+    download fails or the item count is not 5,000.
     """
     cache_file = cache_path or DEFAULT_CACHE_FILE
 
     if cache_file.exists():
         logger.info("Loading cached MATH from %s", cache_file)
         with open(cache_file) as f:
-            return json.load(f)
+            problems = json.load(f)
+        return check_size("MATH", problems, MATH_SIZE,
+                          source=f"{cache_file} (delete it to download again)")
 
-    logger.info("Downloading MATH from HuggingFace...")
-    try:
-        from datasets import load_dataset
-
-        all_items = []
-        for subject in MATH_SUBJECTS:
-            logger.info("  Loading %s...", subject)
-            subset = load_dataset(
-                "EleutherAI/hendrycks_math",
-                subject,
-                split="test",
-                trust_remote_code=True,
-                token=True,
-            )
-            all_items.extend(subset)
-    except Exception as e:
-        logger.error("Failed to load MATH: %s", e)
-        return []
+    logger.info("Downloading MATH from %s at %s...", MATH_REPO, MATH_REVISION[:7])
+    rows = []
+    for subject in MATH_SUBJECTS:
+        rows.extend(read_parquet_rows(
+            MATH_REPO, f"{subject}/test-00000-of-00001.parquet", MATH_REVISION))
 
     problems = []
-    for i, item in enumerate(all_items):
+    for i, item in enumerate(rows):
         solution = item["solution"]
-        answer = _extract_boxed_answer(solution)
         problems.append({
             "problem_id": i,
             "question": item["problem"],
             "ground_truth_reasoning": solution,
-            "ground_truth_answer": answer,
+            "ground_truth_answer": _extract_boxed_answer(solution),
         })
+    check_size("MATH", problems, MATH_SIZE, source=f"{MATH_REPO}@{MATH_REVISION[:7]}")
 
     cache_file.parent.mkdir(parents=True, exist_ok=True)
     with open(cache_file, "w") as f:

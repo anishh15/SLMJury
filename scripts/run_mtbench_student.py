@@ -1,17 +1,4 @@
-"""CLI entry-point: generate student model responses for MT-Bench (2 turns).
-
-MT-Bench is open-ended — the student generates free-form responses to 80
-questions, each with 2 turns. Turn 2 is a follow-up that depends on the
-model's Turn 1 response. These responses are then scored by oracle models
-and SLM judges.
-
-Usage:
-    python scripts/run_mtbench_student.py --model llama3.1-8b
-    python scripts/run_mtbench_student.py --model qwen2.5-32b --tp 2 --gpu-mem 0.85
-
-    # Run both students:
-    #   bash bash/run_mtbench_students.sh
-"""
+"""CLI entry-point: generate student model responses for MT-Bench (2 turns)."""
 
 import argparse
 import gc
@@ -19,20 +6,37 @@ import json
 import logging
 from pathlib import Path
 
+from slmjury.analysis import paths
 from slmjury.configs import load_models_config
 from slmjury.data import load_dataset
+
+NOTES = """\
+MT-Bench is open-ended: the student writes free-form responses to 80
+questions, each with 2 turns. Turn 2 is a follow-up that depends on the
+model's Turn 1 response. The reference models (scripts/run_mtbench_reference.py)
+and the SLM judges then score these responses.
+
+examples:
+  python scripts/run_mtbench_student.py --student llama3.1-8b
+  python scripts/run_mtbench_student.py --student qwen2.5-32b --tp 2 --gpu-mem 0.85
+
+The study uses two students, qwen2.5-32b and llama3.1-8b. Run the script once
+for each.
+"""
 
 
 def main():
     parser = argparse.ArgumentParser(
         description="Generate student responses for MT-Bench (2 turns).",
+        epilog=NOTES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    student = parser.add_mutually_exclusive_group(required=True)
+    student.add_argument("--student", help="Student model key from student_models in models.yaml")
+    # Older spelling, kept working but not shown in --help.
+    student.add_argument("--model", dest="student", help=argparse.SUPPRESS)
     parser.add_argument(
-        "--model", required=True,
-        help="Student model key from models.yaml",
-    )
-    parser.add_argument(
-        "--output-dir", default="results/mtbench_responses",
+        "--output-dir", default=paths.default_dir("core", "mtbench_responses"),
         help="Directory for saving responses",
     )
     parser.add_argument(
@@ -58,21 +62,21 @@ def main():
     logger = logging.getLogger(__name__)
 
     output_dir = Path(args.output_dir)
-    out_file = output_dir / f"{args.model}.json"
+    out_file = output_dir / f"{args.student}.json"
 
     if out_file.exists() and not args.force:
-        logger.info("SKIP %s — responses already exist (use --force)", args.model)
+        logger.info("SKIP %s — responses already exist (use --force)", args.student)
         return
 
     # Load model config
     config = load_models_config()
     students = config.get("student_models", {})
-    if args.model not in students:
+    if args.student not in students:
         raise ValueError(
-            f"Unknown student model: {args.model}. "
+            f"Unknown student model: {args.student}. "
             f"Available: {list(students.keys())}"
         )
-    cfg = dict(students[args.model])
+    cfg = dict(students[args.student])
 
     # Apply CLI overrides
     if args.tensor_parallel_size is not None:
@@ -159,7 +163,7 @@ def main():
             "turn1_response": t1_resp,
             "turn2_question": prompt_data["turn2"],
             "turn2_response": t2_resp,
-            "student_model": args.model,
+            "student_model": args.student,
         })
 
     # Save

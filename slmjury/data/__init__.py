@@ -10,6 +10,7 @@ from slmjury.data.winogrande import load_winogrande
 from slmjury.data.truthfulqa import load_truthfulqa
 from slmjury.data.summeval import load_summeval
 from slmjury.data.mtbench import load_mtbench
+from slmjury.data.hub import DatasetLoadError, check_size
 
 DATASET_LOADERS = {
     "gsm8k": load_gsm8k,
@@ -26,18 +27,18 @@ DATASET_LOADERS = {
 
 
 def load_dataset(name: str, **kwargs) -> list[dict]:
-    """Load a dataset by name.
+    """Load a dataset by name (a key of DATASET_LOADERS).
 
-    Supported: gsm8k, gsm_plus, math, arc_easy, arc_challenge,
-    hellaswag, winogrande, truthfulqa, summeval, mtbench.
+    Raises DatasetLoadError when it loads no items, so a run stops before any inference.
     """
     if name not in DATASET_LOADERS:
         raise ValueError(f"Unknown dataset: {name}. Choose from: {list(DATASET_LOADERS.keys())}")
-    return DATASET_LOADERS[name](**kwargs)
+    return check_size(name, DATASET_LOADERS[name](**kwargs))
 
 
 __all__ = [
     "load_dataset",
+    "DatasetLoadError",
     "load_gsm8k",
     "load_gsm_plus",
     "load_math",

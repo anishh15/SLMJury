@@ -1,10 +1,7 @@
-"""TruthfulQA (Multiple Choice) dataset loader.
+"""TruthfulQA loader: the 684 four-choice questions (multiple_choice config, validation split).
 
-Downloads and caches the TruthfulQA MC dataset from HuggingFace.
-Uses the multiple_choice config, validation split (only split available).
-
-Schema: question (str), choices (list of 4 strings), label (int 0-3 ClassLabel).
-Tests whether models select truthful answers over common misconceptions.
+Read from the Hub's pinned Parquet export of EleutherAI/truthful_qa_mc. Each question lists
+its choices as A) to D), and the ground-truth answer is the letter of the truthful choice.
 """
 
 import json
@@ -12,63 +9,55 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+from slmjury.data.hub import check_size, read_parquet_rows
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_CACHE_DIR = Path("data") / "truthfulqa"
 DEFAULT_CACHE_FILE = DEFAULT_CACHE_DIR / "truthfulqa.json"
+
+# The Hub's Parquet export (refs/convert/parquet), pinned to one commit.
+TRUTHFULQA_REPO = "EleutherAI/truthful_qa_mc"
+TRUTHFULQA_REVISION = "b6468d07f67cdd1ba48292eb55a515b8a97d02ea"
+TRUTHFULQA_FILE = "multiple_choice/validation/0000.parquet"
+TRUTHFULQA_SIZE = 684
 
 # Label index to letter mapping
 _INDEX_TO_LETTER = {0: "A", 1: "B", 2: "C", 3: "D"}
 
 
 def load_truthfulqa(cache_path: Optional[Path] = None) -> list[dict]:
-    """Load TruthfulQA MC dataset, downloading from HuggingFace if not cached.
+    """TruthfulQA as problem dicts (problem_id, question, ground_truth_reasoning, ground_truth_answer).
 
-    Args:
-        cache_path: Custom path to the cache JSON file.
-
-    Returns:
-        List of problem dicts with keys: problem_id, question,
-        ground_truth_reasoning, ground_truth_answer.
+    Downloads once and caches the result as JSON. Raises DatasetLoadError when the
+    download fails or the item count is not 684.
     """
     cache_file = cache_path or DEFAULT_CACHE_FILE
 
     if cache_file.exists():
         logger.info("Loading cached TruthfulQA from %s", cache_file)
         with open(cache_file) as f:
-            return json.load(f)
+            problems = json.load(f)
+        return check_size("TruthfulQA", problems, TRUTHFULQA_SIZE,
+                          source=f"{cache_file} (delete it to download again)")
 
-    logger.info("Downloading TruthfulQA MC from HuggingFace...")
-    try:
-        from datasets import load_dataset
-        dataset = load_dataset(
-            "EleutherAI/truthful_qa_mc", "multiple_choice", split="validation",
-        )
-    except Exception as e:
-        logger.error("Failed to load TruthfulQA: %s", e)
-        return []
+    logger.info("Downloading TruthfulQA from %s at %s...", TRUTHFULQA_REPO, TRUTHFULQA_REVISION[:7])
+    rows = read_parquet_rows(TRUTHFULQA_REPO, TRUTHFULQA_FILE, TRUTHFULQA_REVISION)
 
     problems = []
-    for i, item in enumerate(dataset):
-        question_text = item["question"].strip()
-        choices = item["choices"]
-
+    for i, item in enumerate(rows):
         choices_text = "  ".join(
-            f"{letter}) {choice}"
-            for letter, choice in zip("ABCD", choices)
+            f"{letter}) {choice}" for letter, choice in zip("ABCD", item["choices"])
         )
-        question = f"{question_text}\n{choices_text}"
-
-        # label is an int (0-3) via ClassLabel
         label = item["label"]
-        answer = _INDEX_TO_LETTER.get(label, str(label))
-
         problems.append({
             "problem_id": i,
-            "question": question,
+            "question": f"{item['question'].strip()}\n{choices_text}",
             "ground_truth_reasoning": "",
-            "ground_truth_answer": answer,
+            "ground_truth_answer": _INDEX_TO_LETTER.get(label, str(label)),
         })
+    check_size("TruthfulQA", problems, TRUTHFULQA_SIZE,
+               source=f"{TRUTHFULQA_REPO}@{TRUTHFULQA_REVISION[:7]}")
 
     cache_file.parent.mkdir(parents=True, exist_ok=True)
     with open(cache_file, "w") as f:

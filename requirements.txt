@@ -1,16 +1,19 @@
 # Core dependencies
-torch>=2.0.0
-transformers>=4.40.0
+torch>=2.6
+transformers>=4.57
 datasets>=2.19.0
 numpy>=1.26.0
-pandas>=2.2.0
 sympy==1.13.1
 antlr4-python3-runtime==4.11.*
 pyyaml>=6.0
-tqdm>=4.66.0
 
 # GPU inference (optional - install separately)
-# vllm>=0.4.0
+# vllm>=0.8.5
 
-# Together API for oracle scoring (optional - install separately)
+# Together API for MT-Bench reference scoring (optional - install separately)
 # together>=1.0.0
+
+# Analysis charts, figures and figure PDF checks (optional - install separately, or the [analysis] extra)
+# matplotlib>=3.8
+# pymupdf>=1.24
+# The overview figure also needs the Source Sans Pro and Source Code Pro fonts from a TeX installation.

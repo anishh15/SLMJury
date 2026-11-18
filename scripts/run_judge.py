@@ -1,33 +1,55 @@
-"""CLI entry-point: run a single judge model across student solutions.
-
-Usage:
-    python scripts/run_judge.py --judge qwen3-4b --max-tokens 10 8192
-
-    # Run all 16 judge models — use the bash wrapper:
-    #   bash bash/run_judges.sh
-"""
+"""CLI entry-point: run a single judge model across student solutions."""
 
 import argparse
 import json
 import logging
 from pathlib import Path
 
-from slmjury.configs import load_models_config
+from slmjury.analysis import paths
+from slmjury.configs import get_judge_config
 from slmjury.core.judge import JudgeModel
+
+NOTES = """\
+example:
+  python scripts/run_judge.py --judge qwen3-4b --max-tokens 10 8192
+
+One process per judge: run it once for each key under judge_models in
+slmjury/configs/models.yaml (and large_judge_models for the large judges).
+Existing judgement files are skipped unless --force is given.
+"""
+
+
+def token_settings(judge: str, requested: list[int]) -> list[int]:
+    """The budgets to run for ``judge``: a judge that always reasons skips the 10-token quick verdict."""
+    if get_judge_config(judge).get("always_thinks"):
+        return [t for t in requested if t != 10]
+    return list(requested)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run judge model evaluation.")
+    parser = argparse.ArgumentParser(
+        description="Run judge model evaluation.",
+        epilog=NOTES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("--judge", required=True, help="Judge model key from models.yaml")
     parser.add_argument(
         "--max-tokens", type=int, nargs="+", default=[10, 8192],
         help="Token settings to evaluate (default: 10 8192)",
     )
     parser.add_argument(
-        "--solutions-dir", default="results/student_solutions",
+        "--solutions-dir", default=paths.default_dir("core", "student_solutions"),
         help="Directory containing student solution files",
     )
-    parser.add_argument("--output-dir", default="results/judgements")
+    parser.add_argument("--output-dir", default=paths.default_dir("core", "judgements"))
+    parser.add_argument(
+        "--datasets", nargs="+", default=None,
+        help="Only judge these datasets (default: every dataset found in --solutions-dir)",
+    )
+    parser.add_argument(
+        "--students", nargs="+", default=None,
+        help="Only judge these students (default: every student in --solutions-dir)",
+    )
     parser.add_argument(
         "--force", action="store_true",
         help="Re-judge even if judgement files already exist",
@@ -51,13 +73,9 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     logger = logging.getLogger(__name__)
 
-    config = load_models_config()
-    judge_cfg = config["judge_models"].get(args.judge, {})
-
-    # Skip max_tokens=10 for always-thinks models
-    token_settings = args.max_tokens
-    if judge_cfg.get("always_thinks"):
-        token_settings = [t for t in token_settings if t != 10]
+    # The lookup covers the large judges too, so gpt-oss-120b and the like run at 8,192 only.
+    budgets = token_settings(args.judge, args.max_tokens)
+    if budgets != list(args.max_tokens):
         logger.info("Model %s always thinks — skipping max_tokens=10", args.judge)
 
     # Build model_config override from CLI args
@@ -83,11 +101,15 @@ def main():
         if not student_dir.is_dir():
             continue
         student_model = student_dir.name
+        if args.students and student_model not in args.students:
+            continue
 
         for solution_file in sorted(student_dir.glob("*.json")):
             dataset = solution_file.stem
+            if args.datasets and dataset not in args.datasets:
+                continue
 
-            for max_tokens in token_settings:
+            for max_tokens in budgets:
                 # Skip if judgement file already exists (unless --force)
                 out_file = (
                     output_dir / args.judge

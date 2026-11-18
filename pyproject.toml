@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "slmjury"
-version = "0.1.0"
-description = "SLMJury: Can Small Language Models Judge as Well as Large Language Models?"
-readme = "README.md"
+version = "0.2.0"
+description = "SLMJury: Can Small Language Models Judge as Well as Large Ones? Small and large LLM judges on reference-guided verification and open-ended scoring."
+readme = {file = "README.pypi.md", content-type = "text/markdown"}
 license = {text = "Apache-2.0"}
 authors = [
     {name = "Anish Laddha", email = "anshladdha15@gmail.com"},
@@ -17,15 +17,23 @@ maintainers = [
     {name = "Anish Laddha", email = "anshladdha15@gmail.com"},
 ]
 keywords = [
+    "llm-as-a-judge",
     "slm",
     "llm",
     "judge",
     "evaluation",
+    "benchmark",
     "reasoning",
     "nlp",
     "small-language-models",
-    "multi-agent-debate",
+    "large-judges",
+    "token-budget",
+    "prompt-sensitivity",
+    "personas",
     "majority-voting",
+    "multi-agent-debate",
+    "summeval",
+    "mt-bench",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -34,6 +42,7 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -42,38 +51,38 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "torch>=2.0.0",
-    "transformers>=4.40.0",
+    "torch>=2.6",
+    "transformers>=4.57",
     "datasets>=2.19.0",
     "numpy>=1.26.0",
-    "pandas>=2.2.0",
     "sympy==1.13.1",
     "antlr4-python3-runtime==4.11.*",
     "pyyaml>=6.0",
-    "tqdm>=4.66.0",
 ]
 
 [project.optional-dependencies]
-vllm = ["vllm>=0.4.0"]
+vllm = ["vllm>=0.8.5"]
 together = ["together>=1.0.0"]
+analysis = ["matplotlib>=3.8", "pymupdf>=1.24"]
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=5.0.0",
     "ruff>=0.4.0",
 ]
 full = [
-    "slmjury[vllm,together,dev]",
+    "slmjury[vllm,together,analysis,dev]",
 ]
 
 [project.urls]
-Homepage = "https://github.com/anishh15/SLMJury"
+Paper = "https://arxiv.org/abs/2606.07810"
+Website = "https://anishh15.github.io/SLMJury/"
 Repository = "https://github.com/anishh15/SLMJury"
-"Bug Tracker" = "https://github.com/anishh15/SLMJury/issues"
-Leaderboard = "https://anishh15.github.io/SLMJury/"
+Issues = "https://github.com/anishh15/SLMJury/issues"
 
 [tool.setuptools]
 packages = [
     "slmjury",
+    "slmjury.analysis",
     "slmjury.configs",
     "slmjury.data",
     "slmjury.parsers",
@@ -83,7 +92,7 @@ packages = [
 ]
 
 [tool.setuptools.package-data]
-slmjury = ["configs/*.yaml", "py.typed"]
+slmjury = ["configs/*.yaml", "parsers/math_labels.json", "py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

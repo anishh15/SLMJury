@@ -1,24 +1,33 @@
-"""CLI entry-point: run a single student model across datasets.
-
-Usage:
-    python scripts/run_student.py --model qwen2.5-32b --datasets gsm8k math
-
-    # Run all student models — use the bash wrapper:
-    #   bash bash/run_students.sh
-"""
+"""CLI entry-point: run a single student model across datasets."""
 
 import argparse
 import logging
 from pathlib import Path
 
+from slmjury.analysis import paths
 from slmjury.configs import load_models_config
 from slmjury.core.solver import StudentSolver
 from slmjury.data import load_dataset
 
+NOTES = """\
+example:
+  python scripts/run_student.py --student qwen2.5-32b --datasets gsm8k math
+
+The study uses two students, qwen2.5-32b and llama3.1-8b. Run the script once
+for each (all eight closed-ended datasets by default).
+"""
+
 
 def main():
-    parser = argparse.ArgumentParser(description="Run student model inference.")
-    parser.add_argument("--model", required=True, help="Student model key from models.yaml")
+    parser = argparse.ArgumentParser(
+        description="Run student model inference.",
+        epilog=NOTES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    student = parser.add_mutually_exclusive_group(required=True)
+    student.add_argument("--student", help="Student model key from student_models in models.yaml")
+    # Older spelling, kept working but not shown in --help.
+    student.add_argument("--model", dest="student", help=argparse.SUPPRESS)
     parser.add_argument(
         "--datasets", nargs="+",
         default=["gsm8k", "gsm_plus", "math", "arc_easy", "arc_challenge",
@@ -27,7 +36,7 @@ def main():
              "Open-ended datasets (SummEval, MT-Bench) use run_scoring_judge.py.",
     )
     parser.add_argument("--num-samples", type=int, default=None, help="Limit problems per dataset")
-    parser.add_argument("--output-dir", default="results/student_solutions")
+    parser.add_argument("--output-dir", default=paths.default_dir("core", "student_solutions"))
 
     # Hardware overrides
     parser.add_argument(
@@ -50,15 +59,19 @@ def main():
     if args.gpu_memory_utilization is not None:
         model_config["gpu_memory_utilization"] = args.gpu_memory_utilization
 
+    # Every dataset loads before the model, so a bad download stops the run first.
+    datasets = {}
+    for dataset_name in args.datasets:
+        logger.info("Loading dataset: %s", dataset_name)
+        datasets[dataset_name] = load_dataset(dataset_name)
+
     solver = StudentSolver(
-        args.model,
+        args.student,
         output_dir=Path(args.output_dir),
         model_config=model_config or None,
     )
 
-    for dataset_name in args.datasets:
-        logger.info("Loading dataset: %s", dataset_name)
-        problems = load_dataset(dataset_name)
+    for dataset_name, problems in datasets.items():
         results = solver.solve_batch(problems, dataset_name, num_samples=args.num_samples)
         solver.save_results(results, dataset_name)
 

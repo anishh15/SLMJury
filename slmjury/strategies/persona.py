@@ -1,10 +1,7 @@
-"""Persona effect evaluation — measures how system prompts affect judge quality.
+"""Personas: how a persona system prompt changes a judge's verdicts (accuracy and instruction following).
 
-Runs judge models with different persona system prompts to study the effect
-on judgement accuracy and instruction following rate.
-
-The persona prompts below are the EXACT strings used during experimentation.
-Do NOT modify them — any change would alter experimental results.
+The persona prompts below are the exact strings used in the experiments. Do not modify them: any change
+would alter the results.
 """
 
 import json
@@ -84,23 +81,12 @@ def run_persona_evaluation(
     persona_name: str,
     persona_prompt: str,
     judge: Optional[JudgeModel] = None,
-    output_dir: Path = Path("results/persona_effect"),
+    output_dir: Path = Path("results/core/personas"),
 ) -> list[dict]:
-    """Run judge evaluation with a persona system prompt.
+    """Run one judge with one persona system prompt and save the verdicts; returns the judgement dicts.
 
-    Args:
-        judge_model_key: Judge model key.
-        student_results: List of student solution dicts.
-        student_model: Student model key (for filename).
-        dataset: Dataset name (for filename).
-        max_tokens: Token setting.
-        persona_name: Name of the persona.
-        persona_prompt: System prompt text.
-        judge: Optional pre-loaded JudgeModel (avoids reloading).
-        output_dir: Base output directory.
-
-    Returns:
-        List of judgement dicts with persona-influenced verdicts.
+    Saves to ``<output_dir>/<judge>/<persona>_<student>_<dataset>_t<max_tokens>.json``. Pass a loaded ``judge``
+    to avoid reloading the model.
     """
     if judge is None:
         judge = JudgeModel(judge_model_key)
@@ -137,21 +123,11 @@ def run_all_personas(
     dataset: str,
     max_tokens: int,
     judge: Optional[JudgeModel] = None,
-    output_dir: Path = Path("results/persona_effect"),
+    output_dir: Path = Path("results/core/personas"),
 ) -> dict[str, list[dict]]:
-    """Run all personas for a single judge/student/dataset/token combination.
+    """Run every persona for one judge, student, dataset and budget; returns {persona: judgement dicts}.
 
-    Args:
-        judge_model_key: Judge model key.
-        student_results: List of student solution dicts.
-        student_model: Student model key.
-        dataset: Dataset name.
-        max_tokens: Token setting.
-        judge: Optional pre-loaded JudgeModel.
-        output_dir: Base output directory.
-
-    Returns:
-        Dict mapping persona name → list of judgement dicts.
+    Pass a loaded ``judge`` to avoid reloading the model.
     """
     personas = get_personas()
     if judge is None:
