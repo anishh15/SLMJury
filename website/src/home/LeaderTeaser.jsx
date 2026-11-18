@@ -34,12 +34,12 @@ export default function LeaderTeaser() {
   return (
     <section className="section teaser" aria-labelledby="lt-title" ref={ref}>
       <div className="wrap-wide">
-        <div className="sec-head row-head">
+        <div className="sec-head row-head" data-reveal="stagger">
           <h2 className="h2" id="lt-title">The top of the table</h2>
           <Segmented label="Budget" value={b} onChange={setB}
             options={[{ value: 'best', label: 'Better budget' }, { value: QUICK, label: `B = ${QUICK}` }, { value: REASONED, label: `B = ${count(REASONED)}` }]} />
         </div>
-        <div className={`lt${seen ? ' in' : ''}`}>
+        <div className={`lt${seen ? ' in' : ''}`} data-reveal>
           <div className="lt-head" aria-hidden="true">
             <span />
             <span />
@@ -74,7 +74,7 @@ export default function LeaderTeaser() {
             </div>
           )}
         </div>
-        <div className="teaser-foot">
+        <div className="teaser-foot" data-reveal>
           <a className="btn" href="#/leaderboard">Full leaderboard <Icon.arrow className="arrow" /></a>
           <a className="btn btn-ghost" href={`#/leaderboard?compare=${claims.tostGroup.slice(0, 2).join(',')}`}>Compare two judges</a>
           <span className="faint small">Open marks: B = {count(REASONED)}. Cost is an estimate per 1,000 verdicts, at the same budget as the accuracy.</span>

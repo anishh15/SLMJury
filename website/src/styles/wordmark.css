@@ -9,7 +9,7 @@
 .wm-slm, .wm-jury { -webkit-background-clip: text; background-clip: text; color: transparent; }
 .wm-slm { font-family: var(--font-mark); background-image: var(--mark-slm); }
 .wm-jury { font-family: var(--font-mark-i); background-image: var(--mark-jury); padding-right: 0.06em; }
-.wm-glow .wm-text { filter: drop-shadow(0 0 0.05em var(--mark-glow)); }
-:root:not([data-theme='dark']) .wm-glow .wm-text { filter: none; }
 .wm-hero { font-size: clamp(3.5rem, 1.3rem + 7.2vw, 8.4rem); }
 .wm-md { font-size: 23px; }
+/* split (hero): a plain box around each part moves, so the gradient text itself never animates */
+.wm-split .wm-l { display: inline-block; }

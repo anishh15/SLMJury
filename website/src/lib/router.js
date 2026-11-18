@@ -87,6 +87,7 @@ if (window.location.hash && `#${current.raw}` !== window.location.hash) {
 }
 const listeners = new Set()
 let token = 0
+let lastVt = null
 
 async function onHash() {
   const next = parse()
@@ -110,8 +111,11 @@ async function onHash() {
     }
   }
   if (pageChanged && document.startViewTransition && !reducedMotion() && document.visibilityState === 'visible') {
+    const html = document.documentElement
+    html.classList.add('route-vt')
     const vt = document.startViewTransition(() => { flushSync(apply); scroll() })
-    vt.finished.catch(() => {})
+    lastVt = vt
+    vt.finished.catch(() => {}).finally(() => { if (lastVt === vt) html.classList.remove('route-vt') })
   } else {
     apply()
     if (pageChanged) scroll()

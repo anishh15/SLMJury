@@ -28,8 +28,8 @@ export default function Beyond() {
   return (
     <section className="section beyond" aria-labelledby="beyond-title">
       <div className="wrap-wide">
-        <h2 className="h2" id="beyond-title">Beyond one judge</h2>
-        <ul className="by-row">
+        <h2 className="h2" id="beyond-title" data-reveal>Beyond one judge</h2>
+        <ul className="by-row" data-reveal="stagger">
           {ROWS.map((r) => (
             <li key={r.term}>
               <a className="by-item" href="#/findings/strategies">

@@ -1,0 +1,91 @@
+/* Site motion: the home intro, scroll reveals, chart entrances, tab bars, hover and press, route changes.
+   Only transform and opacity move; prefers-reduced-motion shows the final state at once. */
+
+/* ── Home intro (first load only; the class goes when it ends) ─────────────── */
+/* rises start at 0.01, not 0: Chrome skips opacity-0 paints for LCP, so the hero's first paint stays the LCP */
+@keyframes intro-rise { from { opacity: 0.01; transform: translate3d(0, var(--rise, 10px), 0); } }
+@keyframes intro-fade { from { opacity: 0; } }
+@keyframes intro-settle { from { opacity: 0; transform: translateY(-10px) scale(0.55); } }
+@keyframes intro-pop { from { opacity: 0; transform: scale(0.82); } }
+
+.hero-intro .atmo-stars { animation: intro-fade 1000ms var(--ease-ui) both; }
+.hero-intro .atmo-traces { animation: intro-fade 1000ms var(--ease-ui) 160ms both; }
+.hero-intro .atmo-ground { animation: intro-fade 900ms var(--ease-ui) 260ms both; }
+.hero-intro .wm-l { --rise: 0.26em; animation: intro-rise 680ms var(--ease-out) calc(40ms + var(--i) * 70ms) both; }
+.hero-intro .wm-lj { --rise: 0.26em; animation: intro-rise 720ms var(--ease-out) 250ms both; }
+.hero-intro .venue-chip { --rise: 6px; animation: intro-rise 520ms var(--ease-out) 360ms both; }
+.hero-intro .hero-q { --rise: 8px; animation: intro-rise 560ms var(--ease-out) 430ms both; }
+.hero-intro .res-metric, .hero-intro .res-side { animation: intro-rise 560ms var(--ease-out) 540ms both; }
+.hero-intro .res-mid { animation: intro-pop 460ms var(--ease-out) 1060ms both; }
+.hero-intro .res-note { --rise: 6px; animation: intro-rise 500ms var(--ease-out) 1110ms both; }
+.hero-intro .jstrip :is(.js-axis, .js-tick, .js-tick-l, .js-break, .js-band, .js-band-edge),
+.hero-intro .js-key { animation: intro-fade 600ms var(--ease-ui) 600ms both; }
+.hero-intro .js-drop { transform-box: fill-box; transform-origin: center; animation: intro-settle 520ms var(--ease-out) calc(660ms + var(--i) * 16ms) both; }
+.hero-intro .js-callout, .hero-intro .js-ring { animation: intro-fade 460ms var(--ease-ui) 1080ms both; }
+.hero-intro .hero-actions { --rise: 8px; animation: intro-rise 500ms var(--ease-out) 1160ms both; }
+
+/* ── Scroll reveals (lib/reveal.js: wait, then in, then done) ────────────── */
+[data-rv='wait']:not([data-reveal='stagger']), [data-rv='wait'][data-reveal='stagger'] > * { opacity: 0; transform: translate3d(0, 18px, 0); }
+[data-rv='in']:not([data-reveal='stagger']), [data-rv='in'][data-reveal='stagger'] > * {
+  transition: opacity 600ms var(--ease-out), transform 760ms var(--ease-out);
+  transition-delay: calc(var(--rv-i, 0) * 60ms);
+}
+/* during the home intro, anything already in view waits for the hero to settle */
+.intro-on [data-rv='in']:not([data-reveal='stagger']), .intro-on [data-rv='in'][data-reveal='stagger'] > * { transition-delay: calc(1150ms + var(--rv-i, 0) * 60ms); }
+
+/* ── Chart marks enter once (lib/motion.js useMarksIn) ───────────────────── */
+@keyframes mk-pop { from { opacity: 0; transform: scale(0.35); } }
+@keyframes mk-cell { from { opacity: 0; transform: scale(0.88); } }
+@keyframes mk-grow-x { from { transform: scaleX(0); } }
+@keyframes mk-grow-y { from { transform: scaleY(0); } }
+.mk { transform-box: fill-box; transform-origin: center; }
+.mk-wait .mk { opacity: 0; }
+.mk-in .mk { animation: mk-pop 560ms var(--ease-out) var(--mk-d, 0ms) both; }
+.mk-in .mk.mk-cell { animation-name: mk-cell; }
+.mk-in .mk.mk-x { animation-name: mk-grow-x; transform-origin: left center; }
+.mk-in .mk.mk-y { animation-name: mk-grow-y; transform-origin: center bottom; }
+.mk-wait .mk.mk-x, .mk-wait .mk.mk-y { opacity: 1; transform: scale(0); }
+
+/* ── Tab rows: one underline that slides (lib/motion.js useTabIndicator) ─── */
+.tab-bar {
+  position: absolute; left: 0; bottom: -1px; width: 100px; height: 2px; border-radius: 2px;
+  background: var(--accent-2); transform-origin: 0 0; opacity: 0; pointer-events: none;
+}
+.tab-bar.ready { transition: transform var(--dur-layout) var(--ease-out); }
+
+/* a new leaderboard tab's table lifts in */
+@keyframes tab-enter { from { opacity: 0; transform: translateY(6px); } }
+.tab-enter { animation: tab-enter 380ms var(--ease-out) backwards; }
+
+/* ── Hover and press ─────────────────────────────────────────────────────── */
+@media (hover: hover) {
+  .btn:hover, .chip:hover, a.pill:hover { transform: translateY(-1px); }
+  :is(.jn, .pager, .mdocs, .pick-runners a, .reexports a):hover { transform: translateY(-2px); }
+}
+.btn:active, .chip:active { transform: translateY(0) scale(0.97); }
+:is(.lb-tabs, .variant-tabs) button:active, .task:active, .seg button:active, .sec-nav a:active { transform: scale(0.97); }
+:is(.lb-tabs, .variant-tabs) button, .task, .seg button, .sec-nav a { transition-property: color, background-color, box-shadow, transform; transition-duration: var(--dur-hover), var(--dur-hover), var(--dur-hover), var(--dur-press); transition-timing-function: var(--ease-ui); }
+:is(.jn, .pager, .mdocs, .pick-runners a, .reexports a) { transition: border-color var(--dur-hover) var(--ease-ui), background-color var(--dur-hover) var(--ease-ui), transform var(--dur-ui) var(--ease-out); }
+:is(.jn, .pager, .mdocs, .pick-runners a, .reexports a, .by-item, .lt-row a):active { transform: scale(0.99); transition-duration: var(--dur-press); }
+
+/* table rows: a quiet press tint */
+.lb tbody tr:active td { background: var(--tint); }
+
+/* ── Route changes: the page lifts in under a still header ───────────────── */
+.site-header { view-transition-name: site-header; }
+@keyframes vt-out { to { opacity: 0; } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(12px); } }
+:root.route-vt::view-transition-old(root) { animation: vt-out 150ms var(--ease-ui) both; }
+:root.route-vt::view-transition-new(root) { animation: vt-in 420ms var(--ease-out) 40ms both; }
+
+/* ── Reduced motion and print: the final state at once ───────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  [data-rv], [data-rv][data-reveal='stagger'] > *, .mk-wait .mk { opacity: 1 !important; transform: none !important; }
+}
+@media print {
+  [data-rv], [data-rv][data-reveal='stagger'] > *, .mk-wait .mk { opacity: 1 !important; transform: none !important; }
+}
+
+/* Stage charts: axes and bands fade in with the marks the first time */
+.stage.mk-wait :is(.st-tick, .st-fade, .st-area-g, .ax-line) { opacity: 0; }
+.stage.mk-in :is(.st-tick, .st-fade, .st-area-g, .ax-line) { animation: intro-fade 520ms var(--ease-ui) both; }

@@ -9,7 +9,7 @@ export default function CiteBlock() {
   return (
     <section className="section cite-block" aria-labelledby="cite-title">
       <div className="wrap-wide">
-        <div className="cite-row">
+        <div className="cite-row" data-reveal="stagger">
           <div>
             <span className="venue-chip" title={meta.venue.label}>{meta.venue.chip}</span>
             <h2 className="cite-paper" id="cite-title">SLMJury: Can Small Language Models Judge as Well as Large Ones?</h2>

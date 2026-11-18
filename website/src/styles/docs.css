@@ -124,10 +124,10 @@ details.more[open] summary { margin-bottom: 8px; }
 .prompt-text .field { padding: 1px 6px; border-radius: 5px; background: var(--tint); color: var(--accent-ink); font-weight: 500; }
 :root[data-theme='dark'] .prompt-text .field { color: var(--accent-ink); }
 .variants { margin: var(--s-4) 0; }
-.variant-tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--line); margin-bottom: var(--s-4); }
+.variant-tabs { position: relative; display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--line); margin-bottom: var(--s-4); }
 .variant-tabs button { height: 36px; padding: 0 12px; margin-bottom: -1px; border-bottom: 2px solid transparent; color: var(--muted); font-size: var(--t-14); font-weight: 500; text-transform: capitalize; transition: color var(--dur-hover), border-color var(--dur-ui) var(--ease-ui); }
 .variant-tabs button:hover { color: var(--ink); }
-.variant-tabs button[aria-selected='true'] { color: var(--ink); border-bottom-color: var(--navy); }
+.variant-tabs button[aria-selected='true'] { color: var(--ink); }
 .variant-entry + .variant-entry { margin-top: var(--s-5); }
 .variant-entry .prompt-text { margin-top: 8px; }
 

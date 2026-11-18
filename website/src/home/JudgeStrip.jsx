@@ -97,7 +97,7 @@ export default function JudgeStrip({ pair }) {
             </g>
           )
         })}
-        {marks.map((m) => {
+        {marks.map((m, i) => {
           const on = hot && hot.key === m.key
           const picked = pair.includes(m.key)
           return (
@@ -107,7 +107,7 @@ export default function JudgeStrip({ pair }) {
               <g transform={`translate(${m.x},${yOf(m)})`}>
                 <circle r={pitch * 0.62} className="js-hit" />
                 {(picked || on) && <circle r={r + 4} className={`js-ring${on ? ' on' : ''}`} />}
-                <Mark fam={m.j.family} r={r} open={m.budget === REASONED && m.budget !== QUICK} />
+                <Mark fam={m.j.family} r={r} open={m.budget === REASONED && m.budget !== QUICK} className="js-drop" style={{ '--i': i }} />
               </g>
             </a>
           )

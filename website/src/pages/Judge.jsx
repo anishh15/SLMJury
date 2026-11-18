@@ -8,6 +8,7 @@ import MathText from '../components/MathText'
 import { byKey, claims, core, facts, FAMILY_SLUG, famLabel, judges, ranked, statement, useResults } from '../lib/data'
 import { cap, count, fmt, signed } from '../lib/format'
 import { setLastJudge } from '../lib/vt'
+import { sweepDelay, useMarksIn } from '../lib/motion'
 import '../styles/content.css'
 import '../styles/judge.css'
 
@@ -35,13 +36,14 @@ function useSample(key) {
 // this one lit, its comparison ringed.
 function Strip({ value, values, other, fam, lo, hi, band }) {
   const x = (v) => 6 + ((v - lo) / (hi - lo || 1)) * 188
+  const [ref, entry] = useMarksIn()
   return (
-    <svg className="strip" viewBox="0 0 200 22" aria-hidden="true">
+    <svg className={`strip ${entry}`} viewBox="0 0 200 22" aria-hidden="true" ref={ref}>
       {band && <rect x={x(band[0])} width={x(band[1]) - x(band[0])} y="2" height="18" className="strip-band" />}
       <line x1="6" x2="194" y1="11" y2="11" className="strip-line" />
-      {values.map((v, n) => <circle key={n} cx={x(v)} cy="11" r="2.3" className="strip-dot" />)}
-      {other != null && <circle cx={x(other)} cy="11" r="5.5" className="strip-other" />}
-      <g transform={`translate(${x(value)},11)`}><Mark fam={fam} r={5} /></g>
+      {values.map((v, n) => <circle key={n} cx={x(v)} cy="11" r="2.3" className="strip-dot mk" style={{ '--mk-d': sweepDelay(x(v), 200, 360) }} />)}
+      {other != null && <circle cx={x(other)} cy="11" r="5.5" className="strip-other mk" style={{ '--mk-d': '380ms' }} />}
+      <g transform={`translate(${x(value)},11)`}><Mark fam={fam} r={5} className="mk" style={{ '--mk-d': '440ms' }} /></g>
     </svg>
   )
 }
@@ -289,7 +291,7 @@ export default function Judge({ route }) {
 
         {!res && <div className="skeleton" style={{ height: 380 }} />}
         {res && (
-          <div className="judge-grid">
+          <div className="judge-grid" data-reveal="stagger">
             {dsSpec && (
               <ChartFrame id={`judge-${key}-datasets`} title="Accuracy per dataset" sub={`Grey: ${near.name}, the nearest ${j.kind === 'large' ? 'small' : 'large'} judge.`} legend={budgetKey} table={dsSpec.table}>
                 <Lazy height={340}><Stage spec={dsSpec} height={340} /></Lazy>
@@ -323,7 +325,7 @@ export default function Judge({ route }) {
         )}
 
         <section className="verdicts-sec" aria-labelledby="vs-h">
-          <div className="vs-head">
+          <div className="vs-head" data-reveal>
             <h2 className="h3" id="vs-h">Real verdicts</h2>
             <p className="muted small">
               The same {core.items.length} items for every judge.
@@ -332,13 +334,13 @@ export default function Judge({ route }) {
           </div>
           {!sample && <div className="skeleton" style={{ height: 260 }} />}
           {sample && (
-            <div className="vc-grid">
+            <div className="vc-grid" data-reveal="stagger">
               {core.items.map((it, k) => <VerdictCard key={`${key}-${k}`} item={it} row={sample.items[k]} />)}
             </div>
           )}
         </section>
 
-        <nav className="judge-next" aria-label="Other judges">
+        <nav className="judge-next" aria-label="Other judges" data-reveal="stagger">
           <a href={`#/judge/${prev.key}`} className="jn prev">
             <span className="jn-l"><Icon.arrowLeft /> Previous</span>
             <span className="jn-n"><MarkIcon fam={prev.family} size={13} ring={prev.kind === 'ladder'} /> {prev.name}</span>

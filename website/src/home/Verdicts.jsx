@@ -57,11 +57,11 @@ export default function Verdicts() {
   return (
     <section className="section verdicts" aria-labelledby="verdicts-title">
       <div className="wrap-wide">
-        <div className="sec-head split">
+        <div className="sec-head split" data-reveal="stagger">
           <h2 className="h2" id="verdicts-title">{nJudges} judges, one answer</h2>
           <p className="dek">Guess first, then see all {nJudges} verdicts.</p>
         </div>
-        <div className="vs-grid">
+        <div className="vs-grid" data-reveal="stagger">
           <article className="item-card" aria-label={`Item ${idx + 1} of ${items.length}`}>
             <header className="item-head">
               <span className="item-ds">{it.datasetName}</span>

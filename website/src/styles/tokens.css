@@ -122,7 +122,6 @@
   --mark-slm-gold: linear-gradient(#a8820f, #a8820f);
   --mark-slm-plain: linear-gradient(180deg, #0b1b33 0%, #1d3a66 100%);
   --mark-jury: linear-gradient(135deg, #3f6fb0 0%, #1d3a66 100%);
-  --mark-glow: transparent;
   --hero-q: #22385a;
 
   --shadow-1: 0 1px 2px rgba(11, 27, 51, 0.06);
@@ -206,7 +205,6 @@
   --mark-slm-gold: linear-gradient(#e8c35a, #e8c35a);
   --mark-slm-plain: linear-gradient(180deg, #ffffff 0%, #b9d5fa 100%);
   --mark-jury: linear-gradient(135deg, #b9d5fa 0%, #6f9fe0 100%);
-  --mark-glow: rgba(31, 111, 234, 0.42);
   --hero-q: #a8cbf7;
 
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);

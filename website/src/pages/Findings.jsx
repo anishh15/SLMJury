@@ -45,7 +45,7 @@ function InlineStep({ s, slug }) {
   const [ref, near] = useNear('60% 0px 60% 0px')
   const h = s.spec.heightNarrow ?? 330
   return (
-    <li className="step inline" ref={ref}>
+    <li className="step inline" ref={ref} data-reveal>
       <StepCard s={s} />
       <ChartFrame id={`${slug}-step-${s.key}`} title={s.spec.title} sub={s.spec.sub} table={s.spec.table} legend={keyFor(s.spec)}>
         {near ? <Stage spec={s.spec} height={h} /> : <div className="stage-ph" style={{ height: h }} />}
@@ -83,7 +83,7 @@ function Story({ f, i, story, wide, vh, openDetails, intro }) {
   return (
     <section id={`f-${f.slug}`} className="story" aria-labelledby={`f-${f.slug}-h`} ref={ref}>
       <div className="wrap">
-        <header className="story-head">
+        <header className="story-head" data-reveal="stagger">
           <span className="story-n tnum">{String(i + 1).padStart(2, '0')}</span>
           <h2 className="h2" id={`f-${f.slug}-h`}>{f.title}</h2>
         </header>
@@ -92,12 +92,12 @@ function Story({ f, i, story, wide, vh, openDetails, intro }) {
           <div className="story-grid">
             <ol className="story-steps">
               {story.steps.map((s, k) => (
-                <li key={s.key} id={`step-${f.slug}-step-${s.key}`} className={`step${k === step ? ' on' : ''}`} data-i={k} ref={(el) => { steps.current[k] = el }}>
+                <li key={s.key} id={`step-${f.slug}-step-${s.key}`} className={`step${k === step ? ' on' : ''}`} data-i={k} data-reveal ref={(el) => { steps.current[k] = el }}>
                   <StepCard s={s} />
                 </li>
               ))}
             </ol>
-            <div className="story-sticky">
+            <div className="story-sticky" data-reveal>
               <ChartFrame id={`${f.slug}-step-${cur.key}`} title={cur.spec.title} sub={cur.spec.sub} table={cur.spec.table} legend={keyFor(cur.spec)} head={dots}>
                 {near ? <Stage spec={cur.spec} height={h} /> : <div className="stage-ph" style={{ height: h }} />}
               </ChartFrame>
@@ -108,7 +108,7 @@ function Story({ f, i, story, wide, vh, openDetails, intro }) {
             {story.steps.map((s) => <InlineStep key={s.key} s={s} slug={f.slug} />)}
           </ol>
         )}
-        <div className={`details${open ? ' open' : ''}`}>
+        <div className={`details${open ? ' open' : ''}`} data-reveal>
           <button type="button" className="details-btn" aria-expanded={open} aria-controls={`d-${f.slug}`} onClick={() => setOpen((o) => !o)}>
             <span className="details-ic">{open ? <Icon.minus /> : <Icon.plus />}</span>
             <span className="details-tx">

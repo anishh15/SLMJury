@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Code, CopyButton, Icon, copyText } from '../components/ui'
 import { loadDocIndex, peekDoc, useDoc } from '../lib/docs'
+import { useTabIndicator } from '../lib/motion'
 import { replaceHash } from '../lib/router'
 import '../styles/content.css'
 import '../styles/docs.css'
@@ -54,14 +55,17 @@ function Prompt({ b, page }) {
 
 function Variants({ b }) {
   const [tab, setTab] = useState(0)
+  const row = useRef(null)
+  const bar = useTabIndicator(row, tab)
   const t = b.tabs[tab]
   const LABEL = { quick: 'Quick verdict', reasoned: 'Reasoned verdict', summeval: 'SummEval scoring', mtbench: 'MT-Bench scoring' }
   return (
     <div className="variants" id={b.id}>
-      <div className="variant-tabs" role="tablist" aria-label="Prompt variants">
+      <div className="variant-tabs" role="tablist" aria-label="Prompt variants" ref={row}>
         {b.tabs.map((x, i) => (
           <button key={x.name} type="button" role="tab" aria-selected={i === tab} onClick={() => setTab(i)}>{x.name.replace(/_/g, ' ')}</button>
         ))}
+        <span className="tab-bar" ref={bar} aria-hidden="true" />
       </div>
       <div role="tabpanel" className="variant-panel">
         {t.entries.map((e) => (

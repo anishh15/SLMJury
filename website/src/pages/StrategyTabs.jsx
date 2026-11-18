@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useTabIndicator } from '../lib/motion'
 import { Icon, MarkIcon, Segmented } from '../components/ui'
 import { byKey, claims, facts, judges, name, QUICK, REASONED } from '../lib/data'
 import { download, toCSV } from '../lib/export'
@@ -21,6 +22,7 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1)
 
 export function TabBar({ tab, onChange }) {
   const ref = useRef(null)
+  const bar = useTabIndicator(ref, tab, { inset: 10 })
   // keep the active tab in view when the row scrolls (phones), without scrolling the page
   useEffect(() => {
     const box = ref.current
@@ -44,6 +46,7 @@ export function TabBar({ tab, onChange }) {
           {t.label}
         </button>
       ))}
+      <span className="tab-bar" ref={bar} aria-hidden="true" />
     </div>
   )
 }

@@ -361,6 +361,7 @@ export default function Leaderboard({ route }) {
   const [heatSort, setHeatSort] = useState(null)
   const [copied, setCopied] = useState(false)
   const [sheet, setSheet] = useState(null)
+  const [tabMoved, setTabMoved] = useState(false)
   const tbody = useRef(null)
   const tableBox = useRef(null)
   const first = useRef(true)
@@ -477,7 +478,8 @@ export default function Leaderboard({ route }) {
       </section>
 
       <section className="wrap-wide lb-wrap">
-        <TabBar tab={st.tab} onChange={(tab) => tab !== st.tab && update({ tab, sort: tab === 'judges' ? 'acc' : TAB_DEFAULT_SORT[tab], dir: 'desc' })} />
+        <TabBar tab={st.tab} onChange={(tab) => { if (tab !== st.tab) { setTabMoved(true); update({ tab, sort: tab === 'judges' ? 'acc' : TAB_DEFAULT_SORT[tab], dir: 'desc' }) } }} />
+        <div key={st.tab} className={tabMoved ? 'tab-enter' : undefined}>
         {st.tab !== 'judges' ? (res ? (
           <TabPanel tab={st.tab} res={res} sort={st.sort} dir={st.dir} pb={st.pb} copied={copied} onCopy={copyLink}
             onBudget={(pb) => update({ pb })}
@@ -700,20 +702,21 @@ export default function Leaderboard({ route }) {
         </ol>}
 
         {st.view === 'overview' ? (
-          <p className="lb-note">
+          <p className="lb-note" data-reveal>
             Accuracy is agreement with the oracle (%). SummEval and MT-Bench are Spearman’s ρ, and MT-Bench uses one reference
             scorer (Qwen3.5-397B-A17B). Bold is the best in a column. † always reasons, so it runs at B = {R} only. Open marks
             are B = {R}. The gold bracket marks the {claims.tostGroup.length} judges that are pairwise equivalent within
             ±{claims.margin} points. Cost is an estimate per 1,000 verdicts, at the same budget as the accuracy.
           </p>
         ) : (
-          <p className="lb-note">
+          <p className="lb-note" data-reveal>
             Each cell is a judge’s accuracy minus the reference’s on that dataset, in points. The reference row shows its
             accuracy (%). Each judge is at the {BUDGET_NAME[st.budget]}{st.budget === QUICK ? ` (B = ${R} for judges that always reason)` : ''}.
             Shading starts at {SHADE_FROM} points and is full at {SHADE_FULL}. Gap is math minus general accuracy, in points.
           </p>
         )}
         </>)}
+        </div>
       </section>
 
       {st.tab === 'judges' && st.compare.length > 0 && !drawer && (

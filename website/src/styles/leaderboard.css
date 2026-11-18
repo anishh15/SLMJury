@@ -239,7 +239,6 @@ th.c-acc button { height: 30px; }
 .lb-tabs button { position: relative; flex: none; height: 40px; padding: 0 12px; color: var(--muted); font-size: var(--t-14); font-weight: 500; white-space: nowrap; transition: color var(--dur-hover) var(--ease-ui); }
 .lb-tabs button:hover { color: var(--ink); }
 .lb-tabs button[aria-selected='true'] { color: var(--ink); font-weight: 600; }
-.lb-tabs button[aria-selected='true']::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--accent-2); }
 .tt-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
 .tt-scroll { position: relative; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); overscroll-behavior-x: contain; }
 .tt-scroll .lb th { top: 0; }

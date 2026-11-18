@@ -31,8 +31,8 @@ export default function Cite() {
       </section>
       <section className="wrap wrap-narrow cite-body">
         <Code code={meta.bibtex} lang="bibtex" title="BibTeX" />
-        <h2 className="h3 cite-sub">The six findings</h2>
-        <ol className="cite-findings">
+        <h2 className="h3 cite-sub" data-reveal>The six findings</h2>
+        <ol className="cite-findings" data-reveal="stagger">
           {FINDINGS.map((f, i) => (
             <li key={f.slug}>
               <a href={`#/findings/${f.slug}`}>
@@ -44,8 +44,8 @@ export default function Cite() {
             </li>
           ))}
         </ol>
-        <h2 className="h3 cite-sub">Contact</h2>
-        <p className="cite-contact">
+        <h2 className="h3 cite-sub" data-reveal>Contact</h2>
+        <p className="cite-contact" data-reveal>
           {EMAILS.map((e, i) => <span key={e}><a href={`mailto:${e}`}>{e}</a>{i < EMAILS.length - 1 ? ' · ' : ''}</span>)}
           <br />
           <span className="muted">Bug reports and new judges are welcome on <a href={`${meta.code}/issues`} target="_blank" rel="noreferrer">GitHub Issues</a>.</span>

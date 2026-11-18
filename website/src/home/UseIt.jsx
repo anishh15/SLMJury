@@ -8,7 +8,7 @@ export default function UseIt() {
   const s = snippets[i]
   return (
     <section className="section useit" aria-labelledby="useit-title">
-      <div className="wrap-wide useit-grid">
+      <div className="wrap-wide useit-grid" data-reveal="stagger">
         <div className="useit-side">
           <h2 className="h2" id="useit-title">Use it on a laptop</h2>
           <p className="dek">No GPU needed. Each output was printed by its code when the site was built.</p>

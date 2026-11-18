@@ -296,11 +296,6 @@ a.pill:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .band-eq-line { stroke: var(--gold); stroke-width: 1; stroke-dasharray: 4 3; opacity: 0.9; }
 .heat-txt { font-size: 11.5px; font-family: var(--font-sans); font-variant-numeric: tabular-nums; pointer-events: none; }
 
-/* ── Reveal (below the fold only; see components/Reveal) ─────────────────── */
-.js .reveal { opacity: 0; transform: translateY(12px); }
-.js .reveal.in { opacity: 1; transform: none; transition: opacity var(--dur-reveal) var(--ease-out) var(--d, 0ms), transform var(--dur-reveal) var(--ease-out) var(--d, 0ms); }
-.js .reveal.at-once { opacity: 1; transform: none; transition: none; }
-
 .skeleton {
   border-radius: var(--r-lg);
   background: linear-gradient(90deg, var(--sunken) 0%, var(--surface-2) 50%, var(--sunken) 100%) 0 0 / 200% 100%;
@@ -312,6 +307,5 @@ a.pill:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .skip-link:focus { top: 12px; }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
-  .js .reveal { opacity: 1; transform: none; }
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
 }

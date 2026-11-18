@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Mark } from '../components/ui'
 import { setHovered, useHovered } from '../lib/data'
+import { sweepDelay, useMarksIn } from '../lib/motion'
 import { linear, log, Tooltip, useTip, useWidth } from './kit'
 
 // A chart whose marks keep their identity between states. Give it a new spec
@@ -70,6 +71,7 @@ function Shape({ mk }) {
 
 export default function Stage({ spec, height, className = '' }) {
   const [box, width] = useWidth(720)
+  const [inRef, entry] = useMarksIn()
   const [tip, showTip, hideTip] = useTip(width)
   const [hot, setHot] = useState(null)
   const linked = useHovered()
@@ -148,6 +150,11 @@ export default function Stage({ spec, height, className = '' }) {
   }
   const onLeave = () => { setHot(null); hideTip(); setHovered(null) }
 
+  // marks sweep in from the left; grid cells fill from the top-left corner
+  const entryDelay = (p) => (p.shape === 'cell'
+    ? sweepDelay(0.6 * (p.px - m.l) / (W - m.l - m.r) + 0.4 * (p.py - m.t) / (H - m.t - m.b), 1, 480)
+    : sweepDelay(p.px - m.l, W - m.l - m.r))
+
   const area = (a) => {
     const x0 = a.x0 == null ? m.l : sx(a.x0)
     const x1 = a.x1 == null ? W - m.r : sx(a.x1)
@@ -157,7 +164,7 @@ export default function Stage({ spec, height, className = '' }) {
   }
 
   return (
-    <div className={`chart stage ${className}`} ref={box}>
+    <div className={`chart stage ${entry} ${className}`} ref={(el) => { box.current = el; inRef.current = el }}>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={spec.alt} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={onLeave}>
         {(spec.areas || []).map((a) => {
           const g = area(a)
@@ -223,7 +230,7 @@ export default function Stage({ spec, height, className = '' }) {
               <g key={mk.id} className={`st-mark${on ? '' : ' out'}${dim ? ' dim' : ''}${isFocus ? ' focus' : ''}`}
                 style={{ transform: `translate(${cur.px}px,${cur.py}px)` }} aria-hidden="true">
                 {isFocus && cur.shape !== 'cell' && <circle r={(cur.r ?? 6) + 7} className="st-ring" />}
-                <Shape mk={cur} />
+                <g className={`mk${cur.shape === 'cell' ? ' mk-cell' : ''}`} style={{ '--mk-d': entryDelay(cur) }}><Shape mk={cur} /></g>
               </g>
             )
           })}

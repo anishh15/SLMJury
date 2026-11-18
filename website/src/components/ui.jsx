@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { famColor } from '../lib/data'
-import { useInView } from '../lib/motion'
 
 // ── Family marks: the paper's shapes ────────────────────────────────────────
 // Llama triangle, Qwen2.5 square, Qwen3 circle, Phi-4 diamond, large hexagon.
@@ -234,17 +233,6 @@ export function Code({ code, lang = 'bash', title, output, wrapToggle = true, cl
         </div>
       )}
     </div>
-  )
-}
-
-// ── Reveal: rises in once below the fold; on screen at mount, it is just there.
-export function Reveal({ as: Tag = 'div', delay = 0, className = '', children, style, ...rest }) {
-  const [ref, seen, atOnce] = useInView()
-  const cls = `reveal${seen ? (atOnce ? ' at-once' : ' in') : ''} ${className}`
-  return (
-    <Tag ref={ref} className={cls} style={{ '--d': `${Math.min(delay, 300)}ms`, ...(style || {}) }} {...rest}>
-      {children}
-    </Tag>
   )
 }
 

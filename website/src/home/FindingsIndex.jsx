@@ -25,11 +25,11 @@ export default function FindingsIndex() {
   return (
     <section className="section findings-index" aria-labelledby="fi-title">
       <div className="wrap-wide fi-grid">
-        <div className="fi-side">
+        <div className="fi-side" data-reveal="stagger">
           <h2 className="h2" id="fi-title">Six findings</h2>
           <a className="btn" href="#/findings">All findings <Icon.arrow className="arrow" /></a>
         </div>
-        <ol className="f-list">
+        <ol className="f-list" data-reveal="stagger">
           {FINDINGS.map((f, i) => <Row key={f.slug} f={f} i={i} />)}
         </ol>
       </div>

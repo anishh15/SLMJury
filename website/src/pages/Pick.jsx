@@ -199,7 +199,7 @@ export default function Pick({ route }) {
           )}
         </div>
 
-        <div className="pick-chart">
+        <div className="pick-chart" data-reveal>
           {spec && (
             <ChartFrame id="pick" title={`${metric} against size`} sub={`Faded: judges larger than ${sizeLabel(maxP)}. Your top three are numbered.${phiBand ? ` Dashed lines: ±${claims.margin} points of Phi-4.` : ''}`} table={spec.table}>
               <Stage spec={spec} height={400} />

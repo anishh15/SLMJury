@@ -40,6 +40,39 @@ export function useInView({ threshold = 0.15, rootMargin = '0px 0px -8% 0px' } =
   return [ref, seen, atOnce]
 }
 
+// Chart marks enter once, the first time their chart scrolls into view. Put the
+// class on the chart's root and "mk" (with a --mk-d delay) on each mark's inner group.
+export function useMarksIn(opts) {
+  const [ref, seen] = useInView(opts)
+  return [ref, seen || reducedMotion() ? 'mk-in' : 'mk-wait']
+}
+
+// A left-to-right sweep: the entrance delay for a mark at x in a chart of width w.
+export const sweepDelay = (x, w, span = 420) => `${Math.round(Math.max(0, Math.min(1, x / (w || 1))) * span)}ms`
+
+// The underline of a tab row slides to the selected tab (transform only).
+export function useTabIndicator(ref, selected, { selector = '[aria-selected="true"]', inset = 0 } = {}) {
+  const bar = useRef(null)
+  const ready = useRef(false)
+  const place = () => {
+    const el = ref.current?.querySelector(selector)
+    const b = bar.current
+    if (!el || !b) return
+    const dy = Math.min(0, el.offsetTop + el.offsetHeight - ref.current.clientHeight)
+    b.style.transform = `translate(${el.offsetLeft + inset}px, ${dy}px) scaleX(${(el.offsetWidth - 2 * inset) / 100})`
+    b.style.opacity = '1'
+    if (!ready.current) requestAnimationFrame(() => { b.classList.add('ready'); ready.current = true })
+  }
+  useLayoutEffect(place, [selected])
+  useEffect(() => {
+    document.fonts?.ready.then(place)
+    let ro
+    if ('ResizeObserver' in window && ref.current) { ro = new ResizeObserver(place); ro.observe(ref.current) }
+    return () => ro?.disconnect()
+  }, [])
+  return bar
+}
+
 const easeOut = (t) => 1 - Math.pow(1 - t, 3)
 const easeIO = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 

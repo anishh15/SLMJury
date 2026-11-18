@@ -40,7 +40,7 @@ function Fold({ id, title, meta, children, open: start = false }) {
   const [open, setOpen] = useState(start)
   useEffect(() => { if (start) setOpen(true) }, [start])
   return (
-    <section className={`fold method-anchor${open ? ' open' : ''}`} id={id}>
+    <section className={`fold method-anchor${open ? ' open' : ''}`} id={id} data-reveal>
       <button type="button" className="fold-btn" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         <span className="fold-t">{title}</span>
         <span className="fold-m">{meta}</span>
@@ -82,7 +82,7 @@ export default function Method({ route }) {
 
       <section className="wrap">
         <Flow />
-        <p className="mnote">
+        <p className="mnote" data-reveal>
           At <strong>B = {QUICK}</strong> the judge answers in one word, and at <strong>B = {R}</strong> it reasons first.
           Accuracy is the share of verdicts that match a programmatic oracle, which checks each student answer against the reference.
           Every comparison is paired on the same items, corrected over all {facts.nJudgePairs} judge pairs.
@@ -90,8 +90,8 @@ export default function Method({ route }) {
       </section>
 
       <section className="wrap">
-        <h2 className="h3 msub">Beyond one judge</h2>
-        <ul className="mlist">
+        <h2 className="h3 msub" data-reveal>Beyond one judge</h2>
+        <ul className="mlist" data-reveal="stagger">
           {BEYOND.map(([t, n, d]) => (
             <li key={t} className="ml">
               <span className="ml-t">{t}</span>
@@ -101,8 +101,8 @@ export default function Method({ route }) {
           ))}
         </ul>
         <a className="link-btn mbeyond" href="#/findings/strategies">What they do to accuracy <Icon.arrow width="14" /></a>
-        <h2 className="h3 msub">What else changes, one at a time</h2>
-        <ul className="mlist">
+        <h2 className="h3 msub" data-reveal>What else changes, one at a time</h2>
+        <ul className="mlist" data-reveal="stagger">
           {VARIES.map(([t, n, d]) => (
             <li key={t} className="ml">
               <span className="ml-t">{t}</span>
@@ -175,7 +175,7 @@ export default function Method({ route }) {
             </div>
           </div>
         </Fold>
-        <a className="mdocs" href="#/docs/prompts">
+        <a className="mdocs" href="#/docs/prompts" data-reveal>
           <span><strong>Prompts and code</strong><span className="muted">Every prompt, word for word, and the command line, in the docs.</span></span>
           <Icon.arrow />
         </a>

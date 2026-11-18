@@ -2,11 +2,13 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import { initialRoute, preload } from './lib/router'
+import { startReveals } from './lib/reveal'
 import './styles/tokens.css'
 import './styles/base.css'
 import './styles/shell.css'
 import './styles/home.css'
 import './styles/charts.css'
+import './styles/motion.css'
 import sans400 from '@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff2?url'
 import sans500 from '@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-500-normal.woff2?url'
 import sans600 from '@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-600-normal.woff2?url'
@@ -22,7 +24,9 @@ for (const href of [sans400, sans500, sans600, serif]) {
 // A deep link waits for its page module, so the first paint is the page itself.
 const first = initialRoute()
 preload(first.page, first).finally(() => {
-  createRoot(document.getElementById('root')).render(
+  const root = document.getElementById('root')
+  startReveals(root)
+  createRoot(root).render(
     <StrictMode>
       <App />
     </StrictMode>,

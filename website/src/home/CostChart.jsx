@@ -121,7 +121,7 @@ export default function CostChart() {
   return (
     <section className="section cost" aria-labelledby="cost-title">
       <div className="wrap-wide">
-        <div className="chart-frame" id="chart-cost">
+        <div className="chart-frame" id="chart-cost" data-reveal>
           <div className="cf-head">
             <div>
               <h2 className="h2" id="cost-title">Accuracy against the cost of 1,000 verdicts</h2>
