@@ -1,0 +1,104 @@
+name: Publish to PyPI
+
+# Runs when a GitHub release is published: test, build once, publish to TestPyPI, install from there and
+# check it, then publish to PyPI. Uploads use trusted publishing (no tokens), so this does nothing until
+# the testpypi and pypi environments and the trusted publishers are set up.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install the test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest pyyaml "sympy==1.13.1" "antlr4-python3-runtime==4.11.*"
+      - name: Run the unit tests
+        run: python -m pytest tests -q
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check the release tag matches the package version
+        run: |
+          version=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME does not match version $version"; exit 1; }
+      - name: Build the sdist and the wheel
+        run: |
+          python -m pip install build twine
+          python -m build
+          twine check --strict dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-testpypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  check-testpypi:
+    needs: publish-testpypi
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install from TestPyPI and run it outside a checkout
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          python -m pip install pyyaml "sympy==1.13.1" "antlr4-python3-runtime==4.11.*"
+          for attempt in 1 2 3 4 5 6; do
+            python -m pip install --index-url https://test.pypi.org/simple/ --no-deps "slmjury==$version" && break
+            sleep 30
+          done
+          cd "$RUNNER_TEMP"
+          python - <<'PY'
+          from slmjury import answers_are_equivalent, extract_answer, majority_vote, parse_judgement
+          assert parse_judgement("The final answer matches the reference.\n\\boxed{Correct}") == "Correct"
+          assert extract_answer("Natalia sold 48/2 = 24 clips in May.\n#### 72", "numeric") == "72"
+          assert answers_are_equivalent(r"\dfrac{1}{2}", r"\frac12", "latex")
+          assert majority_vote(["Correct", "Incorrect", "Correct"]) == "Correct"
+          print("slmjury from TestPyPI works")
+          PY
+
+  publish-pypi:
+    needs: check-testpypi
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
